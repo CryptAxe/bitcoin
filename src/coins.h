@@ -457,8 +457,12 @@ public:
      */
     CAmount GetValueIn(const CTransaction& tx) const;
 
-    //! Check whether all prevouts of the transaction are present in the UTXO set represented by this view
-    bool HaveInputs(const CTransaction& tx) const;
+    /**
+     * Check whether all prevouts of the transaction are present in
+     * the UTXO set represented by this view. Optionally return whether
+     * or not any sidechain UTXO inputs are in the tx.
+     */
+    bool HaveInputs(const CTransaction& tx, bool* fSidechainInputs = NULL) const;
 
     /**
      * Return priority of tx at height nHeight. Also calculate the sum of the values of the inputs

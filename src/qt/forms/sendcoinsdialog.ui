@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>850</width>
-    <height>526</height>
+    <width>1026</width>
+    <height>680</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -587,8 +587,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>830</width>
-        <height>104</height>
+        <width>1004</width>
+        <height>75</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,1">
@@ -829,7 +829,7 @@
                     <string>If the custom fee is set to 1000 satoshis and the transaction is only 250 bytes, then &quot;per kilobyte&quot; only pays 250 satoshis in fee, while &quot;total at least&quot; pays 1000 satoshis. For transactions bigger than a kilobyte both pay by kilobyte.</string>
                    </property>
                    <property name="text">
-                    <string>per kilobyte</string>
+                    <string>per &amp;kilobyte</string>
                    </property>
                    <property name="checked">
                     <bool>true</bool>
@@ -845,7 +845,7 @@
                     <string>If the custom fee is set to 1000 satoshis and the transaction is only 250 bytes, then &quot;per kilobyte&quot; only pays 250 satoshis in fee, while &quot;total at least&quot; pays 1000 satoshis. For transactions bigger than a kilobyte both pay by kilobyte.</string>
                    </property>
                    <property name="text">
-                    <string>total at least</string>
+                    <string>total at &amp;least</string>
                    </property>
                    <attribute name="buttonGroup">
                     <string notr="true">groupCustomFee</string>
@@ -920,7 +920,7 @@
                <item>
                 <widget class="QRadioButton" name="radioSmartFee">
                  <property name="text">
-                  <string>Recommended:</string>
+                  <string>&amp;Recommended:</string>
                  </property>
                  <property name="checked">
                   <bool>true</bool>
@@ -950,7 +950,7 @@
                <item>
                 <widget class="QRadioButton" name="radioCustomFee">
                  <property name="text">
-                  <string>Custom:</string>
+                  <string>C&amp;ustom:</string>
                  </property>
                  <attribute name="buttonGroup">
                   <string notr="true">groupFee</string>
@@ -1248,7 +1248,32 @@
       </widget>
      </item>
      <item>
-      <spacer name="horizontalSpacer">
+      <widget class="Line" name="line_2">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="sendSidechainButton">
+       <property name="text">
+        <string>Send (Sidechain)</string>
+       </property>
+       <property name="icon">
+        <iconset resource="../bitcoin.qrc">
+         <normaloff>:/icons/tx_inout</normaloff>:/icons/tx_inout</iconset>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="Line" name="line_3">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer_8">
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
        </property>
