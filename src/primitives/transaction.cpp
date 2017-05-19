@@ -6,6 +6,7 @@
 #include "primitives/transaction.h"
 
 #include "hash.h"
+#include "sidechaindb.h"
 #include "tinyformat.h"
 #include "utilstrencodings.h"
 

@@ -143,6 +143,11 @@ public:
          return false;
     }
 
+    virtual bool CheckCriticalHash(const std::vector<unsigned char>& vchHash) const
+    {
+         return false;
+    }
+
     virtual ~BaseSignatureChecker() {}
 };
 

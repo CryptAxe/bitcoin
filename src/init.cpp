@@ -30,6 +30,8 @@
 #include "script/standard.h"
 #include "script/sigcache.h"
 #include "scheduler.h"
+#include "sidechain.h"
+#include "sidechaindb.h"
 #include "timedata.h"
 #include "txdb.h"
 #include "txmempool.h"
@@ -42,6 +44,7 @@
 #include "wallet/wallet.h"
 #endif
 #include "warnings.h"
+#include <algorithm>
 #include <stdint.h>
 #include <stdio.h>
 #include <memory>
@@ -1484,7 +1487,7 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)
                               GetArg("-checkblocks", DEFAULT_CHECKBLOCKS))) {
                     strLoadError = _("Corrupted block database detected");
                     break;
-                }
+                }                
             } catch (const std::exception& e) {
                 if (fDebug) LogPrintf("%s\n", e.what());
                 strLoadError = _("Error opening block database");
@@ -1511,6 +1514,41 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)
             } else {
                 return InitError(strLoadError);
             }
+        }
+    }
+
+    // Synchronize SCDB
+    if (chainActive.Tip() && chainActive.Tip()->GetBlockHash() != scdb.GetHashBlockLastSeen())
+    {
+        // Find out how many blocks we need to update SCDB
+        const int nHeight = chainActive.Height();
+        int nTail = nHeight;
+        for (const Sidechain& s : ValidSidechains) {
+            int nLastTau = s.GetLastTauHeight(nHeight);
+            if (nLastTau < nTail)
+                nTail = nLastTau;
+        }
+
+        // Update SCDB
+        for (int i = nTail; i <= nHeight; i++) {
+            // Skip genesis block
+            if (i == 0)
+                continue;
+
+            CBlockIndex* pindex = chainActive[i];
+            // Check that block index exists
+            if (!pindex) {
+                LogPrintf("SCDB cannot read null block index. Exiting.\n");
+                return false;
+            }
+
+            // Check that coinbase is cached
+            if (!pindex->fCoinbase || !pindex->coinbase)
+                return InitError("Cannot initalize SCDB. Corrupt coinbase cache.\n");
+
+            // Update SCDB
+            if (!scdb.Update(i, pindex->GetBlockHash(), pindex->coinbase))
+                return InitError("Failed to initialize SCDB. Invalid state update.\n");
         }
     }
 
@@ -1639,6 +1677,21 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)
     if (pwalletMain)
         pwalletMain->postInitProcess(threadGroup);
 #endif
+
+    // TODO move this somewhere else
+    // Watch sidechain scripts
+    pwalletMain->MarkDirty();
+
+    std::vector<unsigned char> data(ParseHex(std::string(SIDECHAIN_TEST_SCRIPT_HEX)));
+    CScript script(data.begin(), data.end());
+
+    if (!pwalletMain->HaveWatchOnly(script))
+        pwalletMain->AddWatchOnly(script);
+
+    CTxDestination destination;
+    if (ExtractDestination(script, destination)) {
+        pwalletMain->SetAddressBook(destination, "SIDECHAIN_TEST", "receive");
+    }
 
     return !fRequestShutdown;
 }
