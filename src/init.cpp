@@ -1487,7 +1487,7 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)
                               GetArg("-checkblocks", DEFAULT_CHECKBLOCKS))) {
                     strLoadError = _("Corrupted block database detected");
                     break;
-                }                
+                }
             } catch (const std::exception& e) {
                 if (fDebug) LogPrintf("%s\n", e.what());
                 strLoadError = _("Error opening block database");

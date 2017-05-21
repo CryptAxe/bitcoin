@@ -1929,6 +1929,12 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         flags |= SCRIPT_VERIFY_NULLDUMMY;
     }
 
+    // TODO
+    // Activate BRIBE right now for testing
+    if (true) {
+        flags |= SCRIPT_VERIFY_BRIBE;
+    }
+
     int64_t nTime2 = GetTimeMicros(); nTimeForks += nTime2 - nTime1;
     LogPrint("bench", "    - Fork checks: %.2fms [%.2fs]\n", 0.001 * (nTime2 - nTime1), nTimeForks * 0.000001);
 

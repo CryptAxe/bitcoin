@@ -428,19 +428,27 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, un
 
                 case OP_BRIBE:
                 {
-                  if (stack.size() < 1)
-                    return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
+                    if (!(flags & SCRIPT_VERIFY_BRIBE)) {
+                        // not enabled; treat as a NOP4
+                        if (flags & SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS) {
+                            return set_error(serror, SCRIPT_ERR_DISCOURAGE_UPGRADABLE_NOPS);
+                        }
+                        break;
+                    }
 
-                  // Check h*
-                  bool fHashCritical = checker.CheckCriticalHash(stacktop(-1));
+                    if (stack.size() < 1)
+                        return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
 
-                  // Pop h* from the stack
-                  popstack(stack);
+                    // Check h*
+                    bool fHashCritical = checker.CheckCriticalHash(stacktop(-1));
 
-                  // Push result to the stack
-                  stack.push_back(fHashCritical ? vchTrue : vchFalse);
+                    // Pop h* from the stack
+                    popstack(stack);
 
-                  break;
+                    // Push result to the stack
+                    stack.push_back(fHashCritical ? vchTrue : vchFalse);
+
+                    break;
                 }
 
                 case OP_NOP1: case OP_NOP5: case OP_NOP6: case OP_NOP7:
