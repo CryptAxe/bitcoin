@@ -43,6 +43,7 @@ class CTxMemPool;
 class CValidationInterface;
 class CValidationState;
 struct ChainTxData;
+class SidechainDB;
 
 struct PrecomputedTransactionData;
 struct LockPoints;
@@ -313,6 +314,13 @@ void PruneAndFlush();
 /** Prune block files up to a given height */
 void PruneBlockFilesManual(int nPruneUpToHeight);
 
+/** Calculate input and output values specific
+ *  to sidechain deposit transactions */
+void GetSidechainValues(const CTransaction& tx, CAmount& amtSidechainUTXO, CAmount& amtUserInput,
+                        CAmount& amtReturning, CAmount& amtWithdrawn);
+
+bool CheckBWTHash(const uint256& wtjID, const CTransaction& tx);
+
 /** (try to) add transaction to memory pool
  * plTxnReplaced will be appended to with all transactions replaced from mempool **/
 bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransactionRef &tx, bool fLimitFree,
@@ -567,5 +575,17 @@ void DumpMempool();
 
 /** Load the mempool from disk. */
 bool LoadMempool();
+
+/** Tracks validation status of sidechain WT^(s) */
+extern SidechainDB scdb;
+
+/** Remove extra coinbase(s) from chainActive */
+void PruneCoinbaseCache();
+
+/** Create txout proof */
+bool GetTxOutProof(const uint256& txid, const uint256& hashBlock, std::string& strProof);
+
+/** Verify txout proof */
+bool VerifyTxOutProof(const std::string& strProof);
 
 #endif // BITCOIN_VALIDATION_H

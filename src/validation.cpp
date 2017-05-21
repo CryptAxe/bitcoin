@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2010 Satoshi Nakamoto
+﻿// Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2016 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -14,6 +14,7 @@
 #include "consensus/validation.h"
 #include "hash.h"
 #include "init.h"
+#include "merkleblock.h"
 #include "policy/fees.h"
 #include "policy/policy.h"
 #include "pow.h"
@@ -23,6 +24,8 @@
 #include "script/script.h"
 #include "script/sigcache.h"
 #include "script/standard.h"
+#include "sidechain.h"
+#include "sidechaindb.h"
 #include "timedata.h"
 #include "tinyformat.h"
 #include "txdb.h"
@@ -82,6 +85,8 @@ CFeeRate minRelayTxFee = CFeeRate(DEFAULT_MIN_RELAY_TX_FEE);
 CAmount maxTxFee = DEFAULT_TRANSACTION_MAXFEE;
 
 CTxMemPool mempool(::minRelayTxFee);
+
+SidechainDB scdb;
 
 static void CheckBlockIndex(const Consensus::Params& consensusParams);
 
@@ -570,6 +575,57 @@ static bool IsCurrentForFeeEstimation()
     return true;
 }
 
+void GetSidechainValues(const CTransaction &tx, CAmount& amtSidechainUTXO, CAmount& amtUserInput,
+                        CAmount& amtReturning, CAmount& amtWithdrawn)
+{
+    // Collect coins from inputs
+    std::map<const uint256, CCoins> mapCoinsDeposit;
+    for (const CTxIn& in : tx.vin) {
+        CCoins coins;
+        uint256 hash = in.prevout.hash;
+        if (mapCoinsDeposit.find(hash) == mapCoinsDeposit.end()) {
+            pcoinsTip->GetCoins(hash, coins);
+            mapCoinsDeposit[hash] = coins;
+        }
+    }
+
+    // Count inputs
+    for (auto it = mapCoinsDeposit.begin(); it != mapCoinsDeposit.end(); it++) {
+        for (const CTxOut& out : it->second.vout) {
+            CScript scriptPubKey = out.scriptPubKey;
+            if (HexStr(scriptPubKey) == SIDECHAIN_TEST_SCRIPT_HEX) {
+                amtSidechainUTXO += out.nValue;
+            } else {
+                amtUserInput += out.nValue;
+            }
+        }
+    }
+
+    // Count outputs
+    for (const CTxOut& out : tx.vout) {
+        CScript scriptPubKey = out.scriptPubKey;
+        if (HexStr(scriptPubKey) == SIDECHAIN_TEST_SCRIPT_HEX) {
+            amtReturning += out.nValue;
+        } else {
+            amtWithdrawn += out.nValue;
+        }
+    }
+}
+
+bool CheckBWTHash(const uint256& wtjID, const CTransaction &tx)
+{
+    CMutableTransaction mtx = tx;
+
+    // Remove inputs & change output
+    mtx.vin.clear();
+    mtx.vout.pop_back();
+
+    if (mtx.GetHash() == wtjID)
+        return true;
+
+    return false;
+}
+
 bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState& state, const CTransactionRef& ptx, bool fLimitFree,
                               bool* pfMissingInputs, int64_t nAcceptTime, std::list<CTransactionRef>* plTxnReplaced,
                               bool fOverrideMempoolLimit, const CAmount& nAbsurdFee, std::vector<uint256>& vHashTxnToUncache)
@@ -591,6 +647,23 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState& state, const C
     bool witnessEnabled = IsWitnessEnabled(chainActive.Tip(), Params().GetConsensus());
     if (!GetBoolArg("-prematurewitness",false) && tx.HasWitness() && !witnessEnabled) {
         return state.DoS(0, false, REJECT_NONSTANDARD, "no-witness-yet", true);
+    }
+
+    // Sidechain checks
+    {
+        CAmount amtSidechainUTXO = CAmount(0);
+        CAmount amtUserInput = CAmount(0);
+        CAmount amtReturning = CAmount(0);
+        CAmount amtWithdrawn = CAmount(0);
+        GetSidechainValues(tx, amtSidechainUTXO, amtUserInput, amtReturning, amtWithdrawn);
+
+        // Withdraw
+        if (amtSidechainUTXO > amtReturning) {
+            // TODO check work score and approve, rejecting all for now
+            // TODO miner created WT^ will not enter the mempool so a
+            // check must also be added to connectblock
+            return state.DoS(100, false, REJECT_INVALID, "bad-sidechain-withdraw");
+        }
     }
 
     // Rather not work on nonstandard transactions (unless -testnet/-regtest)
@@ -1355,7 +1428,12 @@ void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight)
 bool CScriptCheck::operator()() {
     const CScript &scriptSig = ptxTo->vin[nIn].scriptSig;
     const CScriptWitness *witness = &ptxTo->vin[nIn].scriptWitness;
-    if (!VerifyScript(scriptSig, scriptPubKey, witness, nFlags, CachingTransactionSignatureChecker(ptxTo, nIn, amount, cacheStore, *txdata), &error)) {
+
+    std::multimap<uint256, int> mapBMMLDCopy;
+    if (scriptPubKey.IsBribe())
+        mapBMMLDCopy = scdb.GetLinkingData();
+
+    if (!VerifyScript(scriptSig, scriptPubKey, witness, nFlags, CachingTransactionSignatureChecker(ptxTo, nIn, amount, cacheStore, *txdata, mapBMMLDCopy), &error)) {
         return false;
     }
     return true;
@@ -1851,6 +1929,12 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         flags |= SCRIPT_VERIFY_NULLDUMMY;
     }
 
+    // TODO
+    // Activate BRIBE right now for testing
+    if (true) {
+        flags |= SCRIPT_VERIFY_BRIBE;
+    }
+
     int64_t nTime2 = GetTimeMicros(); nTimeForks += nTime2 - nTime1;
     LogPrint("bench", "    - Fork checks: %.2fms [%.2fs]\n", 0.001 * (nTime2 - nTime1), nTimeForks * 0.000001);
 
@@ -1868,15 +1952,17 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     blockundo.vtxundo.reserve(block.vtx.size() - 1);
     std::vector<PrecomputedTransactionData> txdata;
     txdata.reserve(block.vtx.size()); // Required so that pointers to individual PrecomputedTransactionData don't get invalidated
+    std::vector<CTransaction> vDepositTx;
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
         const CTransaction &tx = *(block.vtx[i]);
 
         nInputs += tx.vin.size();
 
+        bool fSidechainInputs = false;
         if (!tx.IsCoinBase())
         {
-            if (!view.HaveInputs(tx))
+            if (!view.HaveInputs(tx, &fSidechainInputs))
                 return state.DoS(100, error("ConnectBlock(): inputs missing/spent"),
                                  REJECT_INVALID, "bad-txns-inputs-missingorspent");
 
@@ -1893,7 +1979,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                                  REJECT_INVALID, "bad-txns-nonfinal");
             }
         }
-
         // GetTransactionSigOpCost counts 3 types of sigops:
         // * legacy (always)
         // * p2sh (when P2SH enabled in flags and excludes coinbase)
@@ -1914,6 +1999,23 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                 return error("ConnectBlock(): CheckInputs on %s failed with %s",
                     tx.GetHash().ToString(), FormatStateMessage(state));
             control.Add(vChecks);
+        }
+
+        if (fSidechainInputs) {
+            // Check BWT
+            // Check workscore
+        }
+
+        if (!tx.IsCoinBase() && !fJustCheck) {
+            // Check for sidechain deposits
+            bool fSidechainOutput = false;
+            for (const CTxOut out : tx.vout) {
+                const CScript& scriptPubKey = out.scriptPubKey;
+                if (HexStr(scriptPubKey) == SIDECHAIN_TEST_SCRIPT_HEX)
+                    fSidechainOutput = true;
+            }
+            if (fSidechainOutput)
+                vDepositTx.push_back(tx);
         }
 
         CTxUndo undoDummy;
@@ -1968,6 +2070,9 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
     // add this block to the view's block chain
     view.SetBestBlock(pindex->GetBlockHash());
+
+    if (vDepositTx.size())
+        scdb.AddDeposits(vDepositTx);
 
     int64_t nTime5 = GetTimeMicros(); nTimeIndex += nTime5 - nTime4;
     LogPrint("bench", "    - Index writing: %.2fms [%.2fs]\n", 0.001 * (nTime5 - nTime4), nTimeIndex * 0.000001);
@@ -2700,6 +2805,16 @@ bool ReceivedBlockTransactions(const CBlock &block, CValidationState& state, CBl
     if (IsWitnessEnabled(pindexNew->pprev, Params().GetConsensus())) {
         pindexNew->nStatus |= BLOCK_OPT_WITNESS;
     }
+
+    if (chainActive.Height() >= COINBASE_CACHE_HEIGHT) {
+        pindexNew->fCoinbase = true;
+        pindexNew->coinbase = block.vtx[0];
+        nCoinbaseCached++;
+
+        if (nCoinbaseCached >= COINBASE_CACHE_TARGET + COINBASE_CACHE_PRUNE_DELAY)
+            PruneCoinbaseCache();
+    }
+
     pindexNew->RaiseValidity(BLOCK_VALID_TRANSACTIONS);
     setDirtyBlockIndex.insert(pindexNew);
 
@@ -2733,6 +2848,9 @@ bool ReceivedBlockTransactions(const CBlock &block, CValidationState& state, CBl
             mapBlocksUnlinked.insert(std::make_pair(pindexNew->pprev, pindexNew));
         }
     }
+
+    if (!scdb.Update(chainActive.Height(), block.GetHash(), block.vtx[0]))
+        LogPrintf("SCDB failed to updated with block: %s\n", block.GetHash().ToString());
 
     return true;
 }
@@ -4284,6 +4402,27 @@ void DumpMempool(void)
     }
 }
 
+void PruneCoinbaseCache()
+{
+    if (nCoinbaseCached <= COINBASE_CACHE_TARGET)
+        return;
+
+    int nHeight = chainActive.Height() + 1;
+    int nPruneBegin = nHeight - nCoinbaseCached;
+    int nPruneEnd = nPruneBegin + (nCoinbaseCached - COINBASE_CACHE_TARGET);
+    if (nPruneBegin < 0)
+        return;
+
+    for (int i = nPruneBegin; i <= nPruneEnd; i++) {
+        // Block index no longer caches coinbase
+        if (chainActive[i]->fCoinbase)
+            chainActive[i]->fCoinbase = false;
+
+        setDirtyBlockIndex.insert(chainActive[i]);
+        nCoinbaseCached--;
+    }
+}
+
 //! Guess how far we are in the verification process at the given block index
 double GuessVerificationProgress(const ChainTxData& data, CBlockIndex *pindex) {
     if (pindex == NULL)
@@ -4300,6 +4439,58 @@ double GuessVerificationProgress(const ChainTxData& data, CBlockIndex *pindex) {
     }
 
     return pindex->nChainTx / fTxTotal;
+}
+
+bool GetTxOutProof(const uint256& txid, const uint256& hashBlock, std::string& strProof)
+{
+    LOCK(cs_main);
+
+    CBlockIndex* pblockindex = NULL;
+
+    if (!mapBlockIndex.count(hashBlock))
+        return false;
+    pblockindex = mapBlockIndex[hashBlock];
+
+    CBlock block;
+    if(!ReadBlockFromDisk(block, pblockindex, Params().GetConsensus()))
+        return false;
+
+    bool fTxFound = false;
+    for (const auto& tx : block.vtx)
+        if (tx->GetHash() == txid)
+            fTxFound = true;
+
+    if (!fTxFound)
+        return false;
+
+    std::set<uint256> setTxids;
+    setTxids.insert(txid);
+
+    CDataStream ssMB(SER_NETWORK, PROTOCOL_VERSION);
+    CMerkleBlock mb(block, setTxids);
+    ssMB << mb;
+    strProof = HexStr(ssMB.begin(), ssMB.end());
+
+    return true;
+}
+
+bool VerifyTxOutProof(const std::string& strProof)
+{
+    CDataStream ssMB(ParseHex(strProof), SER_NETWORK, PROTOCOL_VERSION);
+    CMerkleBlock merkleBlock;
+    ssMB >> merkleBlock;
+
+    std::vector<uint256> vMatch;
+    std::vector<unsigned int> vIndex;
+    if (merkleBlock.txn.ExtractMatches(vMatch, vIndex) != merkleBlock.header.hashMerkleRoot)
+        return false;
+
+    LOCK(cs_main);
+
+    if (!mapBlockIndex.count(merkleBlock.header.GetHash()) || !chainActive.Contains(mapBlockIndex[merkleBlock.header.GetHash()]))
+        return false;
+
+    return true;
 }
 
 class CMainCleanup

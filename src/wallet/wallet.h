@@ -701,6 +701,11 @@ public:
     void AvailableCoins(std::vector<COutput>& vCoins, bool fOnlyConfirmed=true, const CCoinControl *coinControl = NULL, bool fIncludeZeroValue=false) const;
 
     /**
+     * populate vSidechainCoins with vector of available sidechain COutputs.
+     */
+    void AvailableSidechainCoins(std::vector<COutput>& vSidechainCoins, const uint8_t& nSidechain) const;
+
+    /**
      * Shuffle and select coins until nTargetValue is reached while avoiding
      * small change; This method is stochastic for some inputs and upon
      * completion the coin set and corresponding actual target value is
@@ -789,6 +794,9 @@ public:
      * calling CreateTransaction();
      */
     bool FundTransaction(CMutableTransaction& tx, CAmount& nFeeRet, bool overrideEstimatedFeeRate, const CFeeRate& specificFeeRate, int& nChangePosInOut, std::string& strFailReason, bool includeWatching, bool lockUnspents, const std::set<int>& setSubtractFeeFromOutputs, bool keepReserveKey = true, const CTxDestination& destChange = CNoDestination());
+
+    /* Create a transaction with special format for sidechains */
+    bool CreateSidechainDeposit(CTransactionRef& tx, std::string& strFail, const uint8_t& nSidechain, const CAmount& nAmount, const CKeyID& keyID);
 
     /**
      * Create a new transaction paying the recipients with a set of coins
