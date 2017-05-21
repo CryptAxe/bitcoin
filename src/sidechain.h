@@ -7,7 +7,7 @@
 
 #include "pubkey.h"
 
-#include <vector>
+#include <array>
 
 /**
  * Sidechain Keys
@@ -22,6 +22,12 @@ static const char* const SIDECHAIN_TEST_SCRIPT_HEX = "76a914497f7d6b59281591c50b
 static const int SIDECHAIN_MAX_WT = 3;
 
 static const int SIDECHAIN_MAX_LD = 2600;
+
+enum SidechainNumber {
+    SIDECHAIN_TEST = 0,
+    SIDECHAIN_HIVEMIND = 1,
+    SIDECHAIN_WIMBLE = 2
+};
 
 struct Sidechain {
     uint8_t nSidechain;
@@ -52,6 +58,7 @@ struct SidechainWTJoinState {
     uint256 wtxid;
 
     std::string ToString() const;
+    bool IsNull() const;
 
     // For hash calculation
     ADD_SERIALIZE_METHODS
@@ -65,10 +72,13 @@ struct SidechainWTJoinState {
     }
 };
 
-enum SidechainNumber {
-    SIDECHAIN_TEST = 0,
-    SIDECHAIN_HIVEMIND = 1,
-    SIDECHAIN_WIMBLE = 2
+struct SCDBIndex {
+    std::array<SidechainWTJoinState, SIDECHAIN_MAX_WT> members;
+    bool IsPopulated() const;
+    bool IsFull() const;
+    bool InsertMember(const SidechainWTJoinState& member);
+    void ClearMembers();
+    unsigned int CountPopulatedMembers() const;
 };
 
 static const Sidechain ValidSidechains[] =

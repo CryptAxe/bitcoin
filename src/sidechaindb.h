@@ -17,6 +17,7 @@ class uint256;
 struct Sidechain;
 struct SidechainDeposit;
 struct SidechainWTJoinState;
+struct SCDBIndex;
 
 class SidechainDB
 {
@@ -48,13 +49,10 @@ public:
     CScript CreateStateScript(int nHeight) const;
 
     /** Return serialization hash of SCDB latest verification(s) */
-    uint256 CreateSCDBHash() const;
+    uint256 GetSCDBHash() const;
 
     /** Check SCDB WT^ verification status */
     bool CheckWorkScore(const uint8_t& nSidechain, const uint256& wtxid) const;
-
-    /** Print SCDB WT^ verification status */
-    std::string ToString() const;
 
     /**
      * Update the DB state. This function is the only function that
@@ -69,20 +67,28 @@ public:
     /** Return the hash of the last block SCDB processed */
     uint256 GetHashBlockLastSeen();
 
+    /**
+     * Return from the BMM ratchet the data which is required to
+     * validate an OP_BRIBE script.
+     */
     std::multimap<uint256, int> GetLinkingData() const;
 
+    /** Print SCDB WT^ verification status */
+    std::string ToString() const;
+
 private:
-    /** Sidechain state database */
-    std::vector<std::vector<SidechainWTJoinState>> SCDB;
+    /** Sidechain "database" tracks verification status of WT^(s) */
+    std::vector<SCDBIndex> SCDB;
+
+    /** BMM ratchet */
+    std::multimap<uint256, int> mapBMMLD;
+    std::queue<uint256> queueBMMLD;
 
     /** Cache of potential WT^ transactions */
     std::vector<CTransaction> vWTJoinCache;
 
-    /** Track deposits created during this tau */
+    /** Cache of deposits created during this tau */
     std::vector<SidechainDeposit> vDepositCache;
-
-    std::multimap<uint256, int> mapBMMLD;
-    std::queue<uint256> queueBMMLD;
 
     /** The most recent block that SCDB has processed */
     uint256 hashBlockLastSeen;
@@ -97,9 +103,8 @@ private:
     bool ApplyStateScript(const CScript& state, const std::vector<std::vector<SidechainWTJoinState>>& vState, bool fJustCheck = false);
 
     /**
-     * Submit default state update vote for all sidechains.
-     * Used when either the miner of a block does not include a state
-     * script, or the state script is invalid.
+     * Submit default vote for all sidechain WT^(s).
+     * Used when a new block does not contain a valid update.
      */
     bool ApplyDefaultUpdate();
 };

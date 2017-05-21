@@ -64,6 +64,58 @@ bool SidechainDeposit::operator==(const SidechainDeposit& a) const
             a.hex == hex);
 }
 
+bool SidechainWTJoinState::IsNull() const
+{
+    return (wtxid.IsNull());
+}
+
+bool SCDBIndex::IsPopulated() const
+{
+    // Do the least amount of work to determine whether
+    // SCDBIndex is tracking anything. As the first slot
+    // is populated first, we can just check if it is null.
+    if (!members.front().IsNull())
+        return true;
+
+    return false;
+}
+
+bool SCDBIndex::IsFull() const
+{
+    for (const SidechainWTJoinState& member : members) {
+        if (member.IsNull())
+            return false;
+    }
+    return true;
+}
+
+bool SCDBIndex::InsertMember(const SidechainWTJoinState& member)
+{
+    for (size_t i = 0; i < members.size(); i++) {
+        if (members[i].IsNull() || members[i].wtxid == member.wtxid) {
+            members[i] = member;
+            return true;
+        }
+    }
+    return false;
+}
+
+void SCDBIndex::ClearMembers()
+{
+    for (size_t i = 0; i < members.size(); i++)
+        members[i].wtxid = uint256();
+}
+
+unsigned int SCDBIndex::CountPopulatedMembers() const
+{
+    unsigned int nMembers = 0;
+    for (const SidechainWTJoinState& member : members) {
+        if (!member.IsNull())
+            nMembers++;
+    }
+    return nMembers;
+}
+
 std::string Sidechain::ToString() const
 {
     std::stringstream ss;
