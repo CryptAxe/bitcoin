@@ -1,17 +1,19 @@
-// Copyright (c) 2015 The Bitcoin Core developers
+// Copyright (c) 2015-2016 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "bench.h"
 #include "perf.h"
 
+#include <assert.h>
 #include <iostream>
 #include <iomanip>
 #include <sys/time.h>
 
-using namespace benchmark;
-
-std::map<std::string, BenchFunction> BenchRunner::benchmarks;
+benchmark::BenchRunner::BenchmarkMap &benchmark::BenchRunner::benchmarks() {
+    static std::map<std::string, benchmark::BenchFunction> benchmarks_map;
+    return benchmarks_map;
+}
 
 static double gettimedouble(void) {
     struct timeval tv;
@@ -19,29 +21,26 @@ static double gettimedouble(void) {
     return tv.tv_usec * 0.000001 + tv.tv_sec;
 }
 
-BenchRunner::BenchRunner(std::string name, BenchFunction func)
+benchmark::BenchRunner::BenchRunner(std::string name, benchmark::BenchFunction func)
 {
-    benchmarks.insert(std::make_pair(name, func));
+    benchmarks().insert(std::make_pair(name, func));
 }
 
 void
-BenchRunner::RunAll(double elapsedTimeForOne)
+benchmark::BenchRunner::RunAll(double elapsedTimeForOne)
 {
     perf_init();
     std::cout << "#Benchmark" << "," << "count" << "," << "min" << "," << "max" << "," << "average" << ","
               << "min_cycles" << "," << "max_cycles" << "," << "average_cycles" << "\n";
 
-    for (std::map<std::string,BenchFunction>::iterator it = benchmarks.begin();
-         it != benchmarks.end(); ++it) {
-
-        State state(it->first, elapsedTimeForOne);
-        BenchFunction& func = it->second;
-        func(state);
+    for (const auto &p: benchmarks()) {
+        State state(p.first, elapsedTimeForOne);
+        p.second(state);
     }
     perf_fini();
 }
 
-bool State::KeepRunning()
+bool benchmark::State::KeepRunning()
 {
     if (count & countMask) {
       ++count;
@@ -93,6 +92,8 @@ bool State::KeepRunning()
     if (now - beginTime < maxElapsed) return true; // Keep going
 
     --count;
+
+    assert(count != 0 && "count == 0 => (now == 0 && beginTime == 0) => return above");
 
     // Output results
     double average = (now-beginTime)/count;

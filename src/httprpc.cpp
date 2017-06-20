@@ -1,4 +1,4 @@
-// Copyright (c) 2015 The Bitcoin Core developers
+// Copyright (c) 2015-2016 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -25,12 +25,12 @@
 static const char* WWW_AUTH_HEADER_DATA = "Basic realm=\"jsonrpc\"";
 
 /** Simple one-shot callback timer to be used by the RPC mechanism to e.g.
- * re-lock the wellet.
+ * re-lock the wallet.
  */
 class HTTPRPCTimer : public RPCTimerBase
 {
 public:
-    HTTPRPCTimer(struct event_base* eventBase, boost::function<void(void)>& func, int64_t millis) :
+    HTTPRPCTimer(struct event_base* eventBase, std::function<void(void)>& func, int64_t millis) :
         ev(eventBase, false, func)
     {
         struct timeval tv;
@@ -52,7 +52,7 @@ public:
     {
         return "HTTP";
     }
-    RPCTimerBase* NewTimer(boost::function<void(void)>& func, int64_t millis)
+    RPCTimerBase* NewTimer(std::function<void(void)>& func, int64_t millis)
     {
         return new HTTPRPCTimer(base, func, millis);
     }
@@ -93,9 +93,9 @@ static bool multiUserAuthorized(std::string strUserPass)
     std::string strUser = strUserPass.substr(0, strUserPass.find(":"));
     std::string strPass = strUserPass.substr(strUserPass.find(":") + 1);
 
-    if (mapMultiArgs.count("-rpcauth") > 0) {
+    if (gArgs.IsArgSet("-rpcauth")) {
         //Search for multi-user login/pass "rpcauth" from config
-        BOOST_FOREACH(std::string strRPCAuth, mapMultiArgs["-rpcauth"])
+        BOOST_FOREACH(std::string strRPCAuth, gArgs.GetArgs("-rpcauth"))
         {
             std::vector<std::string> vFields;
             boost::split(vFields, strRPCAuth, boost::is_any_of(":$"));
@@ -112,9 +112,9 @@ static bool multiUserAuthorized(std::string strUserPass)
             std::string strSalt = vFields[1];
             std::string strHash = vFields[2];
 
-            unsigned int KEY_SIZE = 32;
-            unsigned char *out = new unsigned char[KEY_SIZE]; 
-            
+            static const unsigned int KEY_SIZE = 32;
+            unsigned char out[KEY_SIZE];
+
             CHMAC_SHA256(reinterpret_cast<const unsigned char*>(strSalt.c_str()), strSalt.size()).Write(reinterpret_cast<const unsigned char*>(strPass.c_str()), strPass.size()).Finalize(out);
             std::vector<unsigned char> hexvec(out, out+KEY_SIZE);
             std::string strHashFromPass = HexStr(hexvec);
@@ -215,7 +215,7 @@ static bool HTTPReq_JSONRPC(HTTPRequest* req, const std::string &)
 
 static bool InitRPCAuthentication()
 {
-    if (mapArgs["-rpcpassword"] == "")
+    if (GetArg("-rpcpassword", "") == "")
     {
         LogPrintf("No rpcpassword set - using random cookie authentication\n");
         if (!GenerateAuthCookie(&strRPCUserColonPass)) {
@@ -226,14 +226,14 @@ static bool InitRPCAuthentication()
         }
     } else {
         LogPrintf("Config options rpcuser and rpcpassword will soon be deprecated. Locally-run instances may remove rpcuser to use cookie-based auth, or may be replaced with rpcauth. Please see share/rpcuser for rpcauth auth generation.\n");
-        strRPCUserColonPass = mapArgs["-rpcuser"] + ":" + mapArgs["-rpcpassword"];
+        strRPCUserColonPass = GetArg("-rpcuser", "") + ":" + GetArg("-rpcpassword", "");
     }
     return true;
 }
 
 bool StartHTTPRPC()
 {
-    LogPrint("rpc", "Starting HTTP RPC server\n");
+    LogPrint(BCLog::RPC, "Starting HTTP RPC server\n");
     if (!InitRPCAuthentication())
         return false;
 
@@ -247,12 +247,12 @@ bool StartHTTPRPC()
 
 void InterruptHTTPRPC()
 {
-    LogPrint("rpc", "Interrupting HTTP RPC server\n");
+    LogPrint(BCLog::RPC, "Interrupting HTTP RPC server\n");
 }
 
 void StopHTTPRPC()
 {
-    LogPrint("rpc", "Stopping HTTP RPC server\n");
+    LogPrint(BCLog::RPC, "Stopping HTTP RPC server\n");
     UnregisterHTTPHandler("/", true);
     if (httpRPCTimerInterface) {
         RPCUnsetTimerInterface(httpRPCTimerInterface);

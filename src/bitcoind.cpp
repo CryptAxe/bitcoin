@@ -1,5 +1,5 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2015 The Bitcoin Core developers
+// Copyright (c) 2009-2016 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -10,6 +10,7 @@
 #include "chainparams.h"
 #include "clientversion.h"
 #include "compat.h"
+#include "fs.h"
 #include "rpc/server.h"
 #include "init.h"
 #include "noui.h"
@@ -20,7 +21,6 @@
 #include "utilstrencodings.h"
 
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/thread.hpp>
 
 #include <stdio.h>
@@ -75,11 +75,11 @@ bool AppInit(int argc, char* argv[])
     ParseParameters(argc, argv);
 
     // Process help and version before taking care about datadir
-    if (mapArgs.count("-?") || mapArgs.count("-h") ||  mapArgs.count("-help") || mapArgs.count("-version"))
+    if (IsArgSet("-?") || IsArgSet("-h") ||  IsArgSet("-help") || IsArgSet("-version"))
     {
         std::string strUsage = strprintf(_("%s Daemon"), _(PACKAGE_NAME)) + " " + _("version") + " " + FormatFullVersion() + "\n";
 
-        if (mapArgs.count("-version"))
+        if (IsArgSet("-version"))
         {
             strUsage += FormatParagraph(LicenseInfo());
         }
@@ -97,14 +97,14 @@ bool AppInit(int argc, char* argv[])
 
     try
     {
-        if (!boost::filesystem::is_directory(GetDataDir(false)))
+        if (!fs::is_directory(GetDataDir(false)))
         {
-            fprintf(stderr, "Error: Specified data directory \"%s\" does not exist.\n", mapArgs["-datadir"].c_str());
+            fprintf(stderr, "Error: Specified data directory \"%s\" does not exist.\n", GetArg("-datadir", "").c_str());
             return false;
         }
         try
         {
-            ReadConfigFile(GetArg("-conf", BITCOIN_CONF_FILENAME), mapArgs, mapMultiArgs);
+            ReadConfigFile(GetArg("-conf", BITCOIN_CONF_FILENAME));
         } catch (const std::exception& e) {
             fprintf(stderr,"Error reading configuration file: %s\n", e.what());
             return false;
@@ -136,17 +136,17 @@ bool AppInit(int argc, char* argv[])
         if (!AppInitBasicSetup())
         {
             // InitError will have been called with detailed error, which ends up on console
-            exit(1);
+            exit(EXIT_FAILURE);
         }
         if (!AppInitParameterInteraction())
         {
             // InitError will have been called with detailed error, which ends up on console
-            exit(1);
+            exit(EXIT_FAILURE);
         }
         if (!AppInitSanityChecks())
         {
             // InitError will have been called with detailed error, which ends up on console
-            exit(1);
+            exit(EXIT_FAILURE);
         }
         if (GetBoolArg("-daemon", false))
         {

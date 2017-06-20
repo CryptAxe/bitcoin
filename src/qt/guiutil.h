@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2015 The Bitcoin Core developers
+// Copyright (c) 2011-2016 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -6,6 +6,7 @@
 #define BITCOIN_QT_GUIUTIL_H
 
 #include "amount.h"
+#include "fs.h"
 
 #include <QEvent>
 #include <QHeaderView>
@@ -14,8 +15,7 @@
 #include <QProgressBar>
 #include <QString>
 #include <QTableView>
-
-#include <boost/filesystem.hpp>
+#include <QLabel>
 
 class QValidatedLineEdit;
 class SendCoinsRecipient;
@@ -113,6 +113,9 @@ namespace GUIUtil
     // Open debug.log
     void openDebugLogfile();
 
+    // Open the config file
+    bool openBitcoinConf();
+
     // Replace invalid default fonts with known good ones
     void SubstituteFonts(const QString& language);
 
@@ -139,7 +142,7 @@ namespace GUIUtil
      * Also makes sure the column widths are never larger than the table's viewport.
      * In Qt, all columns are resizable from the right, but it's not intuitive resizing the last column from the right.
      * Usually our second to last columns behave as if stretched, and when on strech mode, columns aren't resizable
-     * interactively or programatically.
+     * interactively or programmatically.
      *
      * This helper object takes care of this issue.
      *
@@ -182,10 +185,10 @@ namespace GUIUtil
     void restoreWindowGeometry(const QString& strSetting, const QSize &defaultSizeIn, QWidget *parent);
 
     /* Convert QString to OS specific boost path through UTF-8 */
-    boost::filesystem::path qstringToBoostPath(const QString &path);
+    fs::path qstringToBoostPath(const QString &path);
 
     /* Convert OS specific boost path to QString through UTF-8 */
-    QString boostPathToQString(const boost::filesystem::path &path);
+    QString boostPathToQString(const fs::path &path);
 
     /* Convert seconds into a QString with days, hours, mins, secs */
     QString formatDurationStr(int secs);
@@ -199,20 +202,46 @@ namespace GUIUtil
     /* Format a CNodeCombinedStats.nTimeOffset into a user-readable string. */
     QString formatTimeOffset(int64_t nTimeOffset);
 
-    QString formateNiceTimeOffset(qint64 secs);
+    QString formatNiceTimeOffset(qint64 secs);
+
+    class ClickableLabel : public QLabel
+    {
+        Q_OBJECT
+
+    Q_SIGNALS:
+        /** Emitted when the label is clicked. The relative mouse coordinates of the click are
+         * passed to the signal.
+         */
+        void clicked(const QPoint& point);
+    protected:
+        void mouseReleaseEvent(QMouseEvent *event);
+    };
+    
+    class ClickableProgressBar : public QProgressBar
+    {
+        Q_OBJECT
+        
+    Q_SIGNALS:
+        /** Emitted when the progressbar is clicked. The relative mouse coordinates of the click are
+         * passed to the signal.
+         */
+        void clicked(const QPoint& point);
+    protected:
+        void mouseReleaseEvent(QMouseEvent *event);
+    };
 
 #if defined(Q_OS_MAC) && QT_VERSION >= 0x050000
     // workaround for Qt OSX Bug:
     // https://bugreports.qt-project.org/browse/QTBUG-15631
     // QProgressBar uses around 10% CPU even when app is in background
-    class ProgressBar : public QProgressBar
+    class ProgressBar : public ClickableProgressBar
     {
         bool event(QEvent *e) {
             return (e->type() != QEvent::StyleAnimationUpdate) ? QProgressBar::event(e) : false;
         }
     };
 #else
-    typedef QProgressBar ProgressBar;
+    typedef ClickableProgressBar ProgressBar;
 #endif
 
 } // namespace GUIUtil

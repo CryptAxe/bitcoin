@@ -1,5 +1,5 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2015 The Bitcoin Core developers
+// Copyright (c) 2009-2016 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -169,7 +169,8 @@ enum opcodetype
     OP_NOP2 = OP_CHECKLOCKTIMEVERIFY,
     OP_CHECKSEQUENCEVERIFY = 0xb2,
     OP_NOP3 = OP_CHECKSEQUENCEVERIFY,
-    OP_NOP4 = 0xb3,
+    OP_BRIBE = 0xb3,
+    OP_NOP4 = OP_BRIBE,
     OP_NOP5 = 0xb4,
     OP_NOP6 = 0xb5,
     OP_NOP7 = 0xb6,
@@ -188,6 +189,24 @@ enum opcodetype
 };
 
 const char* GetOpName(opcodetype opcode);
+
+/* Sidechain state script opcodes (not really opcodes) */
+enum scopcodetype {
+    // State script version
+    SCOP_VERSION = 0x00,
+
+    // Vote types
+    SCOP_REJECT = 0x51,
+    SCOP_VERIFY = 0x52,
+    SCOP_IGNORE = 0x53,
+
+    // Delimeters
+    SCOP_VERSION_DELIM = 0x54,
+    SCOP_WT_DELIM = 0x55,
+    SCOP_SC_DELIM = 0x56,
+};
+
+const char* GetSCOPName(scopcodetype sopcode);
 
 class scriptnum_error : public std::runtime_error
 {
@@ -394,7 +413,6 @@ protected:
     }
 public:
     CScript() { }
-    CScript(const CScript& b) : CScriptBase(b.begin(), b.end()) { }
     CScript(const_iterator pbegin, const_iterator pend) : CScriptBase(pbegin, pend) { }
     CScript(std::vector<unsigned char>::const_iterator pbegin, std::vector<unsigned char>::const_iterator pend) : CScriptBase(pbegin, pend) { }
     CScript(const unsigned char* pbegin, const unsigned char* pend) : CScriptBase(pbegin, pend) { }
@@ -449,16 +467,16 @@ public:
         else if (b.size() <= 0xffff)
         {
             insert(end(), OP_PUSHDATA2);
-            uint8_t data[2];
-            WriteLE16(data, b.size());
-            insert(end(), data, data + sizeof(data));
+            uint8_t _data[2];
+            WriteLE16(_data, b.size());
+            insert(end(), _data, _data + sizeof(_data));
         }
         else
         {
             insert(end(), OP_PUSHDATA4);
-            uint8_t data[4];
-            WriteLE32(data, b.size());
-            insert(end(), data, data + sizeof(data));
+            uint8_t _data[4];
+            WriteLE32(_data, b.size());
+            insert(end(), _data, _data + sizeof(_data));
         }
         insert(end(), b.begin(), b.end());
         return *this;
@@ -472,6 +490,23 @@ public:
         return *this;
     }
 
+    CScript& operator<<(scopcodetype scopcode)
+    {
+        switch (scopcode) {
+        case SCOP_IGNORE:
+        case SCOP_REJECT:
+        case SCOP_SC_DELIM:
+        case SCOP_VERIFY:
+        case SCOP_VERSION:
+        case SCOP_VERSION_DELIM:
+        case SCOP_WT_DELIM:
+            break;
+        default:
+            throw std::runtime_error("CScript::operator<<(): invalid scopcode");
+        }
+        insert(end(), (unsigned char)scopcode);
+        return *this;
+    }
 
     bool GetOp(iterator& pc, opcodetype& opcodeRet, std::vector<unsigned char>& vchRet)
     {
@@ -623,6 +658,7 @@ public:
     bool IsPayToScriptHash() const;
     bool IsPayToWitnessScriptHash() const;
     bool IsWitnessProgram(int& version, std::vector<unsigned char>& program) const;
+    bool IsBribe() const;
 
     /** Called by IsStandardTx and P2SH/BIP62 VerifyScript (which makes it consensus-critical). */
     bool IsPushOnly(const_iterator pc) const;
@@ -655,6 +691,8 @@ struct CScriptWitness
     CScriptWitness() { }
 
     bool IsNull() const { return stack.empty(); }
+
+    void SetNull() { stack.clear(); stack.shrink_to_fit(); }
 
     std::string ToString() const;
 };

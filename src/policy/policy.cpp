@@ -7,12 +7,50 @@
 
 #include "policy/policy.h"
 
-#include "main.h"
+#include "validation.h"
+#include "coins.h"
 #include "tinyformat.h"
 #include "util.h"
 #include "utilstrencodings.h"
 
 #include <boost/foreach.hpp>
+
+CAmount GetDustThreshold(const CTxOut& txout, const CFeeRate& dustRelayFeeIn)
+{
+    // "Dust" is defined in terms of dustRelayFee,
+    // which has units satoshis-per-kilobyte.
+    // If you'd pay more than 1/3 in fees
+    // to spend something, then we consider it dust.
+    // A typical spendable non-segwit txout is 34 bytes big, and will
+    // need a CTxIn of at least 148 bytes to spend:
+    // so dust is a spendable txout less than
+    // 546*dustRelayFee/1000 (in satoshis).
+    // A typical spendable segwit txout is 31 bytes big, and will
+    // need a CTxIn of at least 67 bytes to spend:
+    // so dust is a spendable txout less than
+    // 294*dustRelayFee/1000 (in satoshis).
+    if (txout.scriptPubKey.IsUnspendable())
+        return 0;
+
+    size_t nSize = GetSerializeSize(txout, SER_DISK, 0);
+    int witnessversion = 0;
+    std::vector<unsigned char> witnessprogram;
+
+    if (txout.scriptPubKey.IsWitnessProgram(witnessversion, witnessprogram)) {
+        // sum the sizes of the parts of a transaction input
+        // with 75% segwit discount applied to the script size.
+        nSize += (32 + 4 + 1 + (107 / WITNESS_SCALE_FACTOR) + 4);
+    } else {
+        nSize += (32 + 4 + 1 + 107 + 4); // the 148 mentioned above
+    }
+
+    return 3 * dustRelayFeeIn.GetFee(nSize);
+}
+
+bool IsDust(const CTxOut& txout, const CFeeRate& dustRelayFeeIn)
+{
+    return (txout.nValue < GetDustThreshold(txout, dustRelayFeeIn));
+}
 
     /**
      * Check transaction inputs to mitigate two
@@ -105,7 +143,7 @@ bool IsStandardTx(const CTransaction& tx, std::string& reason, const bool witnes
         else if ((whichType == TX_MULTISIG) && (!fIsBareMultisigStd)) {
             reason = "bare-multisig";
             return false;
-        } else if (txout.IsDust(::minRelayTxFee)) {
+        } else if (IsDust(txout, ::dustRelayFee)) {
             reason = "dust";
             return false;
         }
@@ -163,7 +201,7 @@ bool IsWitnessStandard(const CTransaction& tx, const CCoinsViewCache& mapInputs)
     {
         // We don't care if witness for this input is empty, since it must not be bloated.
         // If the script is invalid without witness, it would be caught sooner or later during validation.
-        if (tx.wit.vtxinwit[i].IsNull())
+        if (tx.vin[i].scriptWitness.IsNull())
             continue;
 
         const CTxOut &prev = mapInputs.GetOutputFor(tx.vin[i]);
@@ -192,13 +230,13 @@ bool IsWitnessStandard(const CTransaction& tx, const CCoinsViewCache& mapInputs)
 
         // Check P2WSH standard limits
         if (witnessversion == 0 && witnessprogram.size() == 32) {
-            if (tx.wit.vtxinwit[i].scriptWitness.stack.back().size() > MAX_STANDARD_P2WSH_SCRIPT_SIZE)
+            if (tx.vin[i].scriptWitness.stack.back().size() > MAX_STANDARD_P2WSH_SCRIPT_SIZE)
                 return false;
-            size_t sizeWitnessStack = tx.wit.vtxinwit[i].scriptWitness.stack.size() - 1;
+            size_t sizeWitnessStack = tx.vin[i].scriptWitness.stack.size() - 1;
             if (sizeWitnessStack > MAX_STANDARD_P2WSH_STACK_ITEMS)
                 return false;
             for (unsigned int j = 0; j < sizeWitnessStack; j++) {
-                if (tx.wit.vtxinwit[i].scriptWitness.stack[j].size() > MAX_STANDARD_P2WSH_STACK_ITEM_SIZE)
+                if (tx.vin[i].scriptWitness.stack[j].size() > MAX_STANDARD_P2WSH_STACK_ITEM_SIZE)
                     return false;
             }
         }
@@ -206,6 +244,8 @@ bool IsWitnessStandard(const CTransaction& tx, const CCoinsViewCache& mapInputs)
     return true;
 }
 
+CFeeRate incrementalRelayFee = CFeeRate(DEFAULT_INCREMENTAL_RELAY_FEE);
+CFeeRate dustRelayFee = CFeeRate(DUST_RELAY_TX_FEE);
 unsigned int nBytesPerSigOp = DEFAULT_BYTES_PER_SIGOP;
 
 int64_t GetVirtualTransactionSize(int64_t nWeight, int64_t nSigOpCost)

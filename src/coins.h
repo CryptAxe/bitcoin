@@ -1,11 +1,12 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2015 The Bitcoin Core developers
+// Copyright (c) 2009-2016 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef BITCOIN_COINS_H
 #define BITCOIN_COINS_H
 
+#include "primitives/transaction.h"
 #include "compressor.h"
 #include "core_memusage.h"
 #include "hash.h"
@@ -17,7 +18,7 @@
 #include <stdint.h>
 
 #include <boost/foreach.hpp>
-#include <boost/unordered_map.hpp>
+#include <unordered_map>
 
 /** 
  * Pruned version of CTransaction: only retains metadata and unspent transaction outputs
@@ -269,12 +270,17 @@ struct CCoinsCacheEntry
     enum Flags {
         DIRTY = (1 << 0), // This cache entry is potentially different from the version in the parent view.
         FRESH = (1 << 1), // The parent view does not have this entry (or it is pruned).
+        /* Note that FRESH is a performance optimization with which we can
+         * erase coins that are fully spent if we know we do not need to
+         * flush the changes to the parent cache.  It is always safe to
+         * not mark FRESH if that condition is not guaranteed.
+         */
     };
 
     CCoinsCacheEntry() : coins(), flags(0) {}
 };
 
-typedef boost::unordered_map<uint256, CCoinsCacheEntry, SaltedTxidHasher> CCoinsMap;
+typedef std::unordered_map<uint256, CCoinsCacheEntry, SaltedTxidHasher> CCoinsMap;
 
 /** Cursor for iterating over CoinsView state */
 class CCoinsViewCursor
@@ -285,7 +291,6 @@ public:
 
     virtual bool GetKey(uint256 &key) const = 0;
     virtual bool GetValue(CCoins &coins) const = 0;
-    /* Don't care about GetKeySize here */
     virtual unsigned int GetValueSize() const = 0;
 
     virtual bool Valid() const = 0;
@@ -452,22 +457,18 @@ public:
      */
     CAmount GetValueIn(const CTransaction& tx) const;
 
-    //! Check whether all prevouts of the transaction are present in the UTXO set represented by this view
-    bool HaveInputs(const CTransaction& tx) const;
-
     /**
-     * Return priority of tx at height nHeight. Also calculate the sum of the values of the inputs
-     * that are already in the chain.  These are the inputs that will age and increase priority as
-     * new blocks are added to the chain.
+     * Check whether all prevouts of the transaction are present in
+     * the UTXO set represented by this view. Optionally return whether
+     * or not any sidechain UTXO inputs are in the tx.
      */
-    double GetPriority(const CTransaction &tx, int nHeight, CAmount &inChainInputValue) const;
+    bool HaveInputs(const CTransaction& tx, bool* fSidechainInputs = NULL) const;
 
     const CTxOut &GetOutputFor(const CTxIn& input) const;
 
     friend class CCoinsModifier;
 
 private:
-    CCoinsMap::iterator FetchCoins(const uint256 &txid);
     CCoinsMap::const_iterator FetchCoins(const uint256 &txid) const;
 
     /**

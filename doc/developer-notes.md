@@ -4,16 +4,21 @@ Developer Notes
 Various coding styles have been used during the history of the codebase,
 and the result is not very consistent. However, we're now trying to converge to
 a single style, so please use it in new code. Old code will be converted
-gradually.
+gradually and you are encouraged to use the provided
+[clang-format-diff script](/contrib/devtools/README.md#clang-format-diffpy)
+to clean up the patch automatically before submitting a pull request.
+
 - Basic rules specified in [src/.clang-format](/src/.clang-format).
-  Use a recent clang-format to format automatically using one of the [dev scripts]
-  (/contrib/devtools/README.md#clang-formatpy).
   - Braces on new lines for namespaces, classes, functions, methods.
   - Braces on the same line for everything else.
   - 4 space indentation (no tabs) for every block except namespaces.
-  - No indentation for public/protected/private or for namespaces.
+  - No indentation for `public`/`protected`/`private` or for `namespace`.
   - No extra spaces inside parenthesis; don't do ( this )
-  - No space after function names; one space after if, for and while.
+  - No space after function names; one space after `if`, `for` and `while`.
+  - If an `if` only has a single-statement then-clause, it can appear
+    on the same line as the if, without braces. In every other case,
+    braces are required, and the then and else clauses must appear
+    correctly indented on a new line.
   - `++i` is preferred over `i++`.
 
 Block style example:
@@ -22,14 +27,18 @@ namespace foo
 {
 class Class
 {
-    bool Function(char* psz, int n)
+    bool Function(const std::string& s, int n)
     {
         // Comment summarising what this section of code does
         for (int i = 0; i < n; ++i) {
             // When something fails, return early
-            if (!Something())
-                return false;
+            if (!Something()) return false;
             ...
+            if (SomethingElse()) {
+                DoMore();
+            } else {
+                DoLess();
+            }
         }
 
         // Success return is usually at the end
@@ -123,7 +132,7 @@ Run with the -testnet option to run with "play bitcoins" on the test network, if
 are testing multi-machine code that needs to operate across the internet.
 
 If you are testing something that can run on one machine, run with the -regtest option.
-In regression test mode, blocks can be created on-demand; see qa/rpc-tests/ for tests
+In regression test mode, blocks can be created on-demand; see test/functional/ for tests
 that run in -regtest mode.
 
 **DEBUG_LOCKORDER**
@@ -243,7 +252,7 @@ Wallet
 
   - *Rationale*: In RPC code that conditionally uses the wallet (such as
     `validateaddress`) it is easy to forget that global pointer `pwalletMain`
-    can be NULL. See `qa/rpc-tests/disablewallet.py` for functional tests
+    can be NULL. See `test/functional/disablewallet.py` for functional tests
     exercising the API with `-disablewallet`
 
 - Include `db_cxx.h` (BerkeleyDB header) only when `ENABLE_WALLET` is set
@@ -334,10 +343,9 @@ Strings and formatting
 Variable names
 --------------
 
-The shadowing warning (`-Wshadow`) is enabled by default. It prevents issues rising
-from using a different variable with the same name.
-
-Please name variables so that their names do not shadow variables defined in the source code.
+Although the shadowing warning (`-Wshadow`) is not enabled by default (it prevents issues rising
+from using a different variable with the same name),
+please name variables so that their names do not shadow variables defined in the source code.
 
 E.g. in member initializers, prepend `_` to the argument name shadowing the
 member name:
@@ -408,7 +416,38 @@ GUI
     should not interact with the user. That's where View classes come in. The converse also
     holds: try to not directly access core data structures from Views.
 
-Git and github tips
+Subtrees
+----------
+
+Several parts of the repository are subtrees of software maintained elsewhere.
+
+Some of these are maintained by active developers of Bitcoin Core, in which case changes should probably go
+directly upstream without being PRed directly against the project.  They will be merged back in the next
+subtree merge.
+
+Others are external projects without a tight relationship with our project.  Changes to these should also
+be sent upstream but bugfixes may also be prudent to PR against Bitcoin Core so that they can be integrated
+quickly.  Cosmetic changes should be purely taken upstream.
+
+There is a tool in contrib/devtools/git-subtree-check.sh to check a subtree directory for consistency with
+its upstream repository.
+
+Current subtrees include:
+
+- src/leveldb
+  - Upstream at https://github.com/google/leveldb ; Maintained by Google, but open important PRs to Core to avoid delay
+
+- src/libsecp256k1
+  - Upstream at https://github.com/bitcoin-core/secp256k1/ ; actively maintaned by Core contributors.
+
+- src/crypto/ctaes
+  - Upstream at https://github.com/bitcoin-core/ctaes ; actively maintained by Core contributors.
+
+- src/univalue
+  - Upstream at https://github.com/jgarzik/univalue ; report important PRs to Core to avoid delay.
+
+
+Git and GitHub tips
 ---------------------
 
 - For resolving merge/rebase conflicts, it can be useful to enable diff3 style using
@@ -455,3 +494,76 @@ Git and github tips
   This will add an `upstream-pull` remote to your git repository, which can be fetched using `git fetch --all`
   or `git fetch upstream-pull`. Afterwards, you can use `upstream-pull/NUMBER/head` in arguments to `git show`,
   `git checkout` and anywhere a commit id would be acceptable to see the changes from pull request NUMBER.
+
+RPC interface guidelines
+--------------------------
+
+A few guidelines for introducing and reviewing new RPC interfaces:
+
+- Method naming: use consecutive lower-case names such as `getrawtransaction` and `submitblock`
+
+  - *Rationale*: Consistency with existing interface.
+
+- Argument naming: use snake case `fee_delta` (and not, e.g. camel case `feeDelta`)
+
+  - *Rationale*: Consistency with existing interface.
+
+- Use the JSON parser for parsing, don't manually parse integers or strings from
+  arguments unless absolutely necessary.
+
+  - *Rationale*: Introduces hand-rolled string manipulation code at both the caller and callee sites,
+    which is error prone, and it is easy to get things such as escaping wrong.
+    JSON already supports nested data structures, no need to re-invent the wheel.
+
+  - *Exception*: AmountToValue can parse amounts as string. This was introduced because many JSON
+    parsers and formatters hard-code handling decimal numbers as floating point
+    values, resulting in potential loss of precision. This is unacceptable for
+    monetary values. **Always** use `AmountToValue` and `ValueToAmount` when
+    inputting or outputting monetary values. The only exceptions to this are
+    `prioritisetransaction` and `getblocktemplate` because their interface
+    is specified as-is in BIP22.
+
+- Missing arguments and 'null' should be treated the same: as default values. If there is no
+  default value, both cases should fail in the same way.
+
+  - *Rationale*: Avoids surprises when switching to name-based arguments. Missing name-based arguments
+  are passed as 'null'.
+
+  - *Exception*: Many legacy exceptions to this exist, one of the worst ones is
+    `getbalance` which follows a completely different code path based on the
+    number of arguments. We are still in the process of cleaning these up. Do not introduce
+    new ones.
+
+- Try not to overload methods on argument type. E.g. don't make `getblock(true)` and `getblock("hash")`
+  do different things.
+
+  - *Rationale*: This is impossible to use with `bitcoin-cli`, and can be surprising to users.
+
+  - *Exception*: Some RPC calls can take both an `int` and `bool`, most notably when a bool was switched
+    to a multi-value, or due to other historical reasons. **Always** have false map to 0 and
+    true to 1 in this case.
+
+- Don't forget to fill in the argument names correctly in the RPC command table.
+
+  - *Rationale*: If not, the call can not be used with name-based arguments.
+
+- Set okSafeMode in the RPC command table to a sensible value: safe mode is when the
+  blockchain is regarded to be in a confused state, and the client deems it unsafe to
+  do anything irreversible such as send. Anything that just queries should be permitted.
+
+  - *Rationale*: Troubleshooting a node in safe mode is difficult if half the
+    RPCs don't work.
+
+- Add every non-string RPC argument `(method, idx, name)` to the table `vRPCConvertParams` in `rpc/client.cpp`.
+
+  - *Rationale*: `bitcoin-cli` and the GUI debug console use this table to determine how to
+    convert a plaintext command line to JSON. If the types don't match, the method can be unusable
+    from there.
+
+- A RPC method must either be a wallet method or a non-wallet method. Do not
+  introduce new methods such as `getinfo` and `signrawtransaction` that differ
+  in behavior based on presence of a wallet.
+
+  - *Rationale*: as well as complicating the implementation and interfering
+    with the introduction of multi-wallet, wallet and non-wallet code should be
+    separated to avoid introducing circular dependencies between code units.

@@ -1,5 +1,5 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2015 The Bitcoin Core developers
+// Copyright (c) 2009-2016 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -7,8 +7,6 @@
 
 #include "tinyformat.h"
 #include "utilstrencodings.h"
-
-using namespace std;
 
 const char* GetOpName(opcodetype opcode)
 {
@@ -129,11 +127,11 @@ const char* GetOpName(opcodetype opcode)
     case OP_CHECKMULTISIG          : return "OP_CHECKMULTISIG";
     case OP_CHECKMULTISIGVERIFY    : return "OP_CHECKMULTISIGVERIFY";
 
-    // expanson
+    // expansion
     case OP_NOP1                   : return "OP_NOP1";
     case OP_CHECKLOCKTIMEVERIFY    : return "OP_CHECKLOCKTIMEVERIFY";
     case OP_CHECKSEQUENCEVERIFY    : return "OP_CHECKSEQUENCEVERIFY";
-    case OP_NOP4                   : return "OP_NOP4";
+    case OP_BRIBE                  : return "OP_BRIBE";
     case OP_NOP5                   : return "OP_NOP5";
     case OP_NOP6                   : return "OP_NOP6";
     case OP_NOP7                   : return "OP_NOP7";
@@ -147,6 +145,23 @@ const char* GetOpName(opcodetype opcode)
     //  The template matching params OP_SMALLINTEGER/etc are defined in opcodetype enum
     //  as kind of implementation hack, they are *NOT* real opcodes.  If found in real
     //  Script, just let the default: case deal with them.
+
+    default:
+        return "OP_UNKNOWN";
+    }
+}
+
+const char* GetSCOPName(scopcodetype sopcode)
+{
+    switch (sopcode)
+    {
+    case SCOP_VERSION           : return "VERSION";
+    case SCOP_REJECT            : return "REJECT";
+    case SCOP_VERIFY            : return "VERIFY";
+    case SCOP_IGNORE            : return "IGNORE";
+    case SCOP_VERSION_DELIM     : return "VERSION_DELIM";
+    case SCOP_WT_DELIM          : return "WT_DELIM";
+    case SCOP_SC_DELIM          : return "SC_DELIM";
 
     default:
         return "OP_UNKNOWN";
@@ -186,18 +201,18 @@ unsigned int CScript::GetSigOpCount(const CScript& scriptSig) const
     // get the last item that the scriptSig
     // pushes onto the stack:
     const_iterator pc = scriptSig.begin();
-    vector<unsigned char> data;
+    std::vector<unsigned char> vData;
     while (pc < scriptSig.end())
     {
         opcodetype opcode;
-        if (!scriptSig.GetOp(pc, opcode, data))
+        if (!scriptSig.GetOp(pc, opcode, vData))
             return 0;
         if (opcode > OP_16)
             return 0;
     }
 
     /// ... and return its opcount:
-    CScript subscript(data.begin(), data.end());
+    CScript subscript(vData.begin(), vData.end());
     return subscript.GetSigOpCount(true);
 }
 
@@ -234,6 +249,28 @@ bool CScript::IsWitnessProgram(int& version, std::vector<unsigned char>& program
         return true;
     }
     return false;
+}
+
+bool CScript::IsBribe() const
+{
+    // TODO
+    // Size must be at least:
+    // sizeof(uint256) to include h*
+    // +
+    // sizeof(uint160) for keyID
+    // +
+    // opcode count
+    //
+    size_t size = this->size();
+    if (size < 32 )
+        return false;
+
+    // TODO
+    // The format of a bribe script is currently being discussed on the
+    // bitcoin-dev mailing list. For now we are just checking if the script
+    // is large enough to contain an h* and contains an OP_BRIBE op.
+
+    return (this->Find(OP_BRIBE));
 }
 
 bool CScript::IsPushOnly(const_iterator pc) const

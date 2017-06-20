@@ -7,7 +7,7 @@
 #include "test/test_bitcoin.h"
 #include "test/test_random.h"
 #include "chainparams.h"
-#include "main.h"
+#include "validation.h"
 #include "consensus/params.h"
 
 #include <boost/test/unit_test.hpp>
@@ -209,7 +209,8 @@ BOOST_AUTO_TEST_CASE(versionbits_test)
     }
 
     // Sanity checks of version bit deployments
-    const Consensus::Params &mainnetParams = Params(CBaseChainParams::MAIN).GetConsensus();
+    const auto chainParams = CreateChainParams(CBaseChainParams::MAIN);
+    const Consensus::Params &mainnetParams = chainParams->GetConsensus();
     for (int i=0; i<(int) Consensus::MAX_VERSION_BITS_DEPLOYMENTS; i++) {
         uint32_t bitmask = VersionBitsMask(mainnetParams, (Consensus::DeploymentPos)i);
         // Make sure that no deployment tries to set an invalid bit.
@@ -235,7 +236,8 @@ BOOST_AUTO_TEST_CASE(versionbits_computeblockversion)
 {
     // Check that ComputeBlockVersion will set the appropriate bit correctly
     // on mainnet.
-    const Consensus::Params &mainnetParams = Params(CBaseChainParams::MAIN).GetConsensus();
+    const auto chainParams = CreateChainParams(CBaseChainParams::MAIN);
+    const Consensus::Params &mainnetParams = chainParams->GetConsensus();
 
     // Use the TESTDUMMY deployment for testing purposes.
     int64_t bit = mainnetParams.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit;
@@ -292,7 +294,7 @@ BOOST_AUTO_TEST_CASE(versionbits_computeblockversion)
         blocksToMine--;
         nTime += 600;
         nHeight += 1;
-    };
+    }
 
     nTime = nTimeout;
     // FAILED is only triggered at the end of a period, so CBV should be setting

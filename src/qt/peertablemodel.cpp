@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2015 The Bitcoin Core developers
+// Copyright (c) 2011-2016 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -8,6 +8,7 @@
 #include "guiconstants.h"
 #include "guiutil.h"
 
+#include "validation.h" // for cs_main
 #include "sync.h"
 
 #include <QDebug>
@@ -165,7 +166,7 @@ QVariant PeerTableModel::data(const QModelIndex &index, int role) const
         switch(index.column())
         {
         case NetNodeId:
-            return rec->nodeStats.nodeid;
+            return (qint64)rec->nodeStats.nodeid;
         case Address:
             return QString::fromStdString(rec->nodeStats.addrName);
         case Subversion:

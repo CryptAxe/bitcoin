@@ -1,4 +1,4 @@
-// Copyright (c) 2015 The Bitcoin Core developers
+// Copyright (c) 2015-2016 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -28,6 +28,7 @@ class prevector_tester {
     typedef typename pretype::size_type Size;
     bool passed = true;
     FastRandomContext rand_cache;
+    uint256 rand_seed;
 
 
     template <typename A, typename B>
@@ -169,14 +170,26 @@ public:
         pre_vector.swap(pre_vector_alt);
         test();
     }
-    ~prevector_tester() {
-        BOOST_CHECK_MESSAGE(passed, "insecure_rand_Rz: "
-                << rand_cache.Rz
-                << ", insecure_rand_Rw: "
-                << rand_cache.Rw);
+
+    void move() {
+        real_vector = std::move(real_vector_alt);
+        real_vector_alt.clear();
+        pre_vector = std::move(pre_vector_alt);
+        pre_vector_alt.clear();
     }
+
+    void copy() {
+        real_vector = real_vector_alt;
+        pre_vector = pre_vector_alt;
+    }
+
+    ~prevector_tester() {
+        BOOST_CHECK_MESSAGE(passed, "insecure_rand: " + rand_seed.ToString());
+    }
+
     prevector_tester() {
         seed_insecure_rand();
+        rand_seed = insecure_rand_seed;
         rand_cache = insecure_rand_ctx;
     }
 };
@@ -240,8 +253,14 @@ BOOST_AUTO_TEST_CASE(PrevectorTestInt)
             if (((r >> 21) % 512) == 12) {
                 test.assign(insecure_rand() % 32, insecure_rand());
             }
-            if (((r >> 15) % 64) == 3) {
+            if (((r >> 15) % 8) == 3) {
                 test.swap();
+            }
+            if (((r >> 15) % 16) == 8) {
+                test.copy();
+            }
+            if (((r >> 15) % 32) == 18) {
+                test.move();
             }
         }
     }

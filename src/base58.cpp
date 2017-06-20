@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015 The Bitcoin Core developers
+// Copyright (c) 2014-2016 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -134,7 +134,7 @@ bool DecodeBase58Check(const char* psz, std::vector<unsigned char>& vchRet)
         vchRet.clear();
         return false;
     }
-    // re-calculate the checksum, insure it matches the included 4-byte checksum
+    // re-calculate the checksum, ensure it matches the included 4-byte checksum
     uint256 hash = Hash(vchRet.begin(), vchRet.end() - 4);
     if (memcmp(&hash, &vchRet.end()[-4], 4) != 0) {
         vchRet.clear();
@@ -208,6 +208,60 @@ int CBase58Data::CompareTo(const CBase58Data& b58) const
     if (vchData > b58.vchData)
         return 1;
     return 0;
+}
+
+bool CSidechainAddress::Set(const CKeyID& id)
+{
+    SetData(Params().Base58Prefix(CChainParams::SIDECHAIN_PUBKEY_ADDRESS), &id, 20);
+    return true;
+}
+
+bool CSidechainAddress::Set(const CScriptID& id)
+{
+    SetData(Params().Base58Prefix(CChainParams::SIDECHAIN_SCRIPT_ADDRESS), &id, 20);
+    return true;
+}
+
+bool CSidechainAddress::IsValid() const
+{
+    return IsValid(Params());
+}
+
+bool CSidechainAddress::IsValid(const CChainParams& params) const
+{
+    bool fCorrectSize = vchData.size() == 20;
+    bool fKnownVersion = vchVersion == params.Base58Prefix(CChainParams::SIDECHAIN_PUBKEY_ADDRESS) ||
+            vchVersion == params.Base58Prefix(CChainParams::SIDECHAIN_SCRIPT_ADDRESS);
+    return fCorrectSize && fKnownVersion;
+}
+
+CTxDestination CSidechainAddress::Get() const
+{
+    if (!IsValid())
+        return CNoDestination();
+    uint160 id;
+    memcpy(&id, &vchData[0], 20);
+    if (vchVersion == Params().Base58Prefix(CChainParams::SIDECHAIN_PUBKEY_ADDRESS))
+        return CKeyID(id);
+    else if (vchVersion == Params().Base58Prefix(CChainParams::SIDECHAIN_SCRIPT_ADDRESS))
+        return CScriptID(id);
+    else
+        return CNoDestination();
+}
+
+bool CSidechainAddress::GetKeyID(CKeyID& keyID) const
+{
+    if (!IsValid() || vchVersion != Params().Base58Prefix(CChainParams::SIDECHAIN_PUBKEY_ADDRESS))
+        return false;
+    uint160 id;
+    memcpy(&id, &vchData[0], 20);
+    keyID = CKeyID(id);
+    return true;
+}
+
+bool CSidechainAddress::IsScript() const
+{
+    return IsValid() && vchVersion == Params().Base58Prefix(CChainParams::SIDECHAIN_SCRIPT_ADDRESS);
 }
 
 namespace
