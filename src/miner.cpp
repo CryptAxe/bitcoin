@@ -711,6 +711,7 @@ CTransaction CreateWTJoinTx(uint32_t nHeight)
     if (!wjtx.vout.size())
         return CTransaction();
 
+#ifdef ENABLE_WALLET
     // TODO improve fee calculation
     CAmount nBaseFee = CENT;
     // Calculate total group fee to be split evenly between sidechain & mainchain
@@ -727,6 +728,7 @@ CTransaction CreateWTJoinTx(uint32_t nHeight)
     // leaving the rest for the mainchain miners
     if (nJoinFee > 0)
         wjtx.vout.push_back(CTxOut((nJoinFee / 2), SIDECHAIN_FEESCRIPT));
+#endif
 
     wjtx.vin.resize(1);
     wjtx.vin[0].scriptSig = CScript() << OP_0;
