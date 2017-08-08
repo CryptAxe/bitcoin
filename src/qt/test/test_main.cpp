@@ -8,7 +8,6 @@
 
 #include "chainparams.h"
 #include "key.h"
-#include "rpcnestedtests.h"
 #include "util.h"
 #include "uritests.h"
 #include "compattests.h"
