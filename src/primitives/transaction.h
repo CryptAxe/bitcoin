@@ -174,8 +174,6 @@ public:
     std::string ToString() const;
 };
 
-struct CMutableTransaction;
-
 /**
  * Basic transaction serialization format:
  * - int32_t nVersion
@@ -257,6 +255,7 @@ inline void SerializeTransaction(const TxType& tx, Stream& s) {
     s << tx.nLockTime;
 }
 
+struct CMutableTransaction;
 
 /** The basic transaction that is broadcasted on the network and contained in
  * blocks.  A transaction can contain multiple inputs and outputs.
@@ -409,5 +408,152 @@ struct CMutableTransaction
 typedef std::shared_ptr<const CTransaction> CTransactionRef;
 static inline CTransactionRef MakeTransactionRef() { return std::make_shared<const CTransaction>(); }
 template <typename Tx> static inline CTransactionRef MakeTransactionRef(Tx&& txIn) { return std::make_shared<const CTransaction>(std::forward<Tx>(txIn)); }
+
+
+
+
+/** Transaction V3 */
+
+/**
+ * Transaction (v3) serialization format:
+ * - int32_t nVersion
+ * - uint32_t nSidechain
+ * - uint256 hashCritical
+ * - std::vector<CTxIn> vin
+ * - std::vector<CTxOut> vout
+ * - uint32_t nLockTime
+ */
+template<typename Stream, typename TxType>
+inline void UnserializeTransactionV3(TxType& tx, Stream& s) {
+    tx.vin.clear();
+    tx.vout.clear();
+
+    s >> tx.nVersion;
+    s >> tx.nSidechain;
+    s >> tx.hashCritical;
+    s >> tx.vin;
+    s >> tx.vout;
+    s >> tx.nLockTime;
+}
+
+template<typename Stream, typename TxType>
+inline void SerializeTransactionV3(const TxType& tx, Stream& s) {
+    s << tx.nVersion;
+    s << tx.nSidechain;
+    s << tx.hashCritical;
+    s << tx.vin;
+    s << tx.vout;
+    s << tx.nLockTime;
+}
+
+struct CMutableTransactionV3;
+
+class CTransactionV3
+{
+public:
+    static const int32_t CURRENT_VERSION=3;
+    static const int32_t MAX_STANDARD_VERSION=3;
+
+    const int32_t nVersion;
+    const uint8_t nSidechain;
+    const uint256 hashCritical;
+    const std::vector<CTxIn> vin;
+    const std::vector<CTxOut> vout;
+    const uint32_t nLockTime;
+
+private:
+    /** Memory only. */
+    const uint256 hash;
+
+    uint256 ComputeHash() const;
+
+public:
+    /** Construct a CTransactionV3 that qualifies as IsNull() */
+    CTransactionV3();
+
+    /** Convert a CMutableTransactionV3 into a CTransactionV3. */
+    CTransactionV3(const CMutableTransactionV3 &tx);
+    CTransactionV3(CMutableTransactionV3 &&tx);
+
+    template <typename Stream>
+    inline void Serialize(Stream& s) const {
+        SerializeTransactionV3(*this, s);
+    }
+
+    /** This deserializing constructor is provided instead of an Unserialize method.
+     *  Unserialize is not possible, since it would require overwriting const fields. */
+    template <typename Stream>
+    CTransactionV3(deserialize_type, Stream& s) : CTransactionV3(CMutableTransactionV3(deserialize, s)) {}
+
+    bool IsNull() const {
+        return vin.empty() && vout.empty();
+    }
+
+    const uint256& GetHash() const {
+        return hash;
+    }
+
+    // Return sum of txouts.
+    CAmount GetValueOut() const;
+
+    /**
+     * Get the total transaction size in bytes, including witness data.
+     * "Total Size" defined in BIP141 and BIP144.
+     * @return Total transaction size in bytes
+     */
+    unsigned int GetTotalSize() const;
+
+
+    friend bool operator==(const CTransactionV3& a, const CTransactionV3& b)
+    {
+        return a.hash == b.hash;
+    }
+
+    friend bool operator!=(const CTransactionV3& a, const CTransactionV3& b)
+    {
+        return a.hash != b.hash;
+    }
+
+    std::string ToString() const;
+};
+
+/** A mutable version of CTransactionV3. */
+struct CMutableTransactionV3
+{
+    int32_t nVersion;
+    uint8_t nSidechain;
+    uint256 hashCritical;
+    std::vector<CTxIn> vin;
+    std::vector<CTxOut> vout;
+    uint32_t nLockTime;
+
+    CMutableTransactionV3();
+    CMutableTransactionV3(const CTransactionV3& tx);
+
+    template <typename Stream>
+    inline void Serialize(Stream& s) const {
+        SerializeTransactionV3(*this, s);
+    }
+
+    template <typename Stream>
+    inline void Unserialize(Stream& s) {
+        UnserializeTransactionV3(*this, s);
+    }
+
+    template <typename Stream>
+    CMutableTransactionV3(deserialize_type, Stream& s) {
+        Unserialize(s);
+    }
+
+    /** Compute the hash of this CMutableTransactionV3. This is computed on the
+     * fly, as opposed to GetHash() in CTransactionV3, which uses a cached result.
+     */
+    uint256 GetHash() const;
+
+    friend bool operator==(const CMutableTransactionV3& a, const CMutableTransactionV3& b)
+    {
+        return a.GetHash() == b.GetHash();
+    }
+};
 
 #endif // BITCOIN_PRIMITIVES_TRANSACTION_H

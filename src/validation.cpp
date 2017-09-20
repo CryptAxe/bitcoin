@@ -3024,6 +3024,39 @@ static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, c
         return state.DoS(100, false, REJECT_INVALID, "bad-blk-weight", false, strprintf("%s : weight limit failed", __func__));
     }
 
+
+    // Validation for TxV3
+    if (true) { // TODO version bits
+
+        // TODO
+        // This is an example, but more work would need to be
+        // done to support version 2 & 3 at the same time.
+        for (const auto& tx: block.vtx) {
+            if (tx->nVersion == 3) {
+                // Check block height
+                // TODO use checker.CheckLockTime()
+                if (nHeight != tx->nLockTime)
+                    return false;
+
+                // Check for null hashCritical
+                if (false /*tx->hashCritical.IsNull()*/)
+                    return false;
+
+                // Check for invalid nSidechain
+                // if (!IsSidechainNumberValid(nSidechain))
+                //     return false;
+
+                // Check for missing hashCritical commitment
+                for (const CTxOut& out : block.vtx[0]->vout) {
+                    // TODO
+                    // Scan for scriptPubKey->IsCriticalHashCommit()
+                    // and compare to tx->hashCritical.
+                    // Return false if the commit is not found.
+                }
+            }
+        }
+    }
+
     return true;
 }
 

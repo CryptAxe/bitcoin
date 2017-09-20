@@ -113,3 +113,58 @@ std::string CTransaction::ToString() const
         str += "    " + tx_out.ToString() + "\n";
     return str;
 }
+
+
+/** Transaction V3 */
+
+CMutableTransactionV3::CMutableTransactionV3() : nVersion(3), nLockTime(0) {}
+CMutableTransactionV3::CMutableTransactionV3(const CTransactionV3& tx) : nVersion(tx.nVersion), nSidechain(tx.nSidechain), hashCritical(tx.hashCritical), vin(tx.vin), vout(tx.vout), nLockTime(tx.nLockTime) {}
+
+uint256 CMutableTransactionV3::GetHash() const
+{
+    return SerializeHash(*this, SER_GETHASH, SERIALIZE_TRANSACTION_NO_WITNESS);
+}
+
+uint256 CTransactionV3::ComputeHash() const
+{
+    return SerializeHash(*this, SER_GETHASH, SERIALIZE_TRANSACTION_NO_WITNESS);
+}
+
+/* For backward compatibility, the hash is initialized to 0. TODO: remove the need for this default constructor entirely. */
+CTransactionV3::CTransactionV3() : nVersion(3), nSidechain(0), hashCritical(), vin(), vout(), nLockTime(0), hash() {}
+CTransactionV3::CTransactionV3(const CMutableTransactionV3 &tx) : nVersion(tx.nVersion), nSidechain(tx.nSidechain), hashCritical(tx.hashCritical), vin(tx.vin), vout(tx.vout), nLockTime(tx.nLockTime), hash(ComputeHash()) {}
+CTransactionV3::CTransactionV3(CMutableTransactionV3 &&tx) : nVersion(tx.nVersion), nSidechain(tx.nSidechain), hashCritical(tx.hashCritical), vin(std::move(tx.vin)), vout(std::move(tx.vout)), nLockTime(tx.nLockTime), hash(ComputeHash()) {}
+
+CAmount CTransactionV3::GetValueOut() const
+{
+    CAmount nValueOut = 0;
+    for (const auto& tx_out : vout) {
+        nValueOut += tx_out.nValue;
+        if (!MoneyRange(tx_out.nValue) || !MoneyRange(nValueOut))
+            throw std::runtime_error(std::string(__func__) + ": value out of range");
+    }
+    return nValueOut;
+}
+
+unsigned int CTransactionV3::GetTotalSize() const
+{
+    return ::GetSerializeSize(*this, SER_NETWORK, PROTOCOL_VERSION);
+}
+
+std::string CTransactionV3::ToString() const
+{
+    std::string str;
+    str += strprintf("CTransactionV3(hash=%s, ver=%d, vin.size=%u, vout.size=%u, nLockTime=%u)\n",
+        GetHash().ToString().substr(0,10),
+        nVersion,
+        vin.size(),
+        vout.size(),
+        nLockTime);
+    for (const auto& tx_in : vin)
+        str += "    " + tx_in.ToString() + "\n";
+    for (const auto& tx_out : vout)
+        str += "    " + tx_out.ToString() + "\n";
+    return str;
+}
+
+
