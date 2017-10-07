@@ -176,6 +176,38 @@ public:
 
 struct CMutableTransaction;
 
+class CCriticalData
+{
+public:
+    int n;
+    uint256 hashCritical;
+
+    CCriticalData()
+    {
+        SetNull();
+    }
+
+    ADD_SERIALIZE_METHODS;
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(n);
+        READWRITE(hashCritical);
+    }
+
+    void SetNull()
+    {
+        n = -1;
+        hashCritical.SetNull();
+    }
+
+    bool IsNull() const
+    {
+        return (n == -1 && hashCritical.IsNull());
+    }
+
+};
+
 /**
  * Basic transaction serialization format:
  * - int32_t nVersion
@@ -196,6 +228,7 @@ struct CMutableTransaction;
 template<typename Stream, typename TxType>
 inline void UnserializeTransaction(TxType& tx, Stream& s) {
     const bool fAllowWitness = !(s.GetVersion() & SERIALIZE_TRANSACTION_NO_WITNESS);
+    const bool fAllowCriticalData = true; // TODO
 
     s >> tx.nVersion;
     unsigned char flags = 0;
@@ -221,6 +254,10 @@ inline void UnserializeTransaction(TxType& tx, Stream& s) {
             s >> tx.vin[i].scriptWitness.stack;
         }
     }
+    if ((flags & 2) && fAllowCriticalData) {
+        flags ^= 2;
+        s >> tx.criticalData;
+    }
     if (flags) {
         /* Unknown flag in the serialization */
         throw std::ios_base::failure("Unknown transaction optional data");
@@ -231,22 +268,29 @@ inline void UnserializeTransaction(TxType& tx, Stream& s) {
 template<typename Stream, typename TxType>
 inline void SerializeTransaction(const TxType& tx, Stream& s) {
     const bool fAllowWitness = !(s.GetVersion() & SERIALIZE_TRANSACTION_NO_WITNESS);
+    const bool fAllowCriticalData = true; // TODO
 
     s << tx.nVersion;
     unsigned char flags = 0;
-    // Consistency check
+
+    // Check whether extra data need to be serialized
     if (fAllowWitness) {
-        /* Check whether witnesses need to be serialized. */
         if (tx.HasWitness()) {
             flags |= 1;
         }
     }
+    if (fAllowCriticalData) {
+        if (!tx.criticalData.IsNull()) {
+            flags |= 2;
+        }
+    }
     if (flags) {
-        /* Use extended format in case witnesses are to be serialized. */
+        /* Use extended format in case extra data will be serialized. */
         std::vector<CTxIn> vinDummy;
         s << vinDummy;
         s << flags;
     }
+
     s << tx.vin;
     s << tx.vout;
     if (flags & 1) {
@@ -254,6 +298,10 @@ inline void SerializeTransaction(const TxType& tx, Stream& s) {
             s << tx.vin[i].scriptWitness.stack;
         }
     }
+    if (flags & 2) {
+        s << tx.criticalData;
+    }
+
     s << tx.nLockTime;
 }
 
@@ -280,6 +328,9 @@ public:
     // structure, including the hash.
     const std::vector<CTxIn> vin;
     const std::vector<CTxOut> vout;
+
+    CCriticalData criticalData;
+
     const int32_t nVersion;
     const uint32_t nLockTime;
 
@@ -363,6 +414,9 @@ struct CMutableTransaction
 {
     std::vector<CTxIn> vin;
     std::vector<CTxOut> vout;
+
+    CCriticalData criticalData;
+
     int32_t nVersion;
     uint32_t nLockTime;
 
