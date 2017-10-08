@@ -3024,6 +3024,27 @@ static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, c
         return state.DoS(100, false, REJECT_INVALID, "bad-blk-weight", false, strprintf("%s : weight limit failed", __func__));
     }
 
+    // Check critical data transactions
+    if (true /* TODO versionbits */) {
+        for (const auto& tx: block.vtx) {
+            // Look for transactions with non-null CCriticalData
+            if (!tx->criticalData.IsNull()) {
+                // Check block height
+                // TODO use checker.CheckLockTime()
+                if (nHeight != tx->nLockTime)
+                    return false;
+
+                // Check for hashCritical commitment in coinbase
+                for (const CTxOut& out : block.vtx[0]->vout) {
+                    // TODO
+                    // Scan for scriptPubKey->IsCriticalHashCommit()
+                    // and compare to tx->criticalData.hashCritical.
+                    // Return false if matching commit is not found.
+                }
+            }
+        }
+    }
+
     return true;
 }
 

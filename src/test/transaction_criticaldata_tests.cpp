@@ -51,15 +51,93 @@ BOOST_AUTO_TEST_CASE(serialization)
 BOOST_AUTO_TEST_CASE(valid)
 {
     // Test in block with a valid data & commit
+    BOOST_CHECK(chainActive.Height() == 100);
+
+    // Generate a block
+    CreateAndProcessBlock({}, GetScriptForRawPubKey(coinbaseKey.GetPubKey()));
+
+    // Checking that we can make blocks normally
+    BOOST_CHECK(chainActive.Height() == 101);
+
+    // create transaction with critical data
+    CMutableTransaction mtx;
+    mtx.nVersion = 2;
+    mtx.vin.resize(1);
+    mtx.vout.resize(1);
+    mtx.vin[0].prevout.hash = coinbaseTxns[0].GetHash();
+    mtx.vin[0].prevout.n = 0;
+    mtx.vout[0].scriptPubKey = CScript() << OP_0;
+    mtx.vout[0].nValue = 50 * CENT;
+
+    // Set locktime to the block we would like critical data to be commited in
+    mtx.nLockTime = 102;
+
+    // Add critical data
+    mtx.criticalData.n = 42;
+    mtx.criticalData.hashCritical = GetRandHash();
+
+    // Sign
+    const CTransaction txToSign(mtx);
+    std::vector<unsigned char> vchSig;
+    uint256 hash = SignatureHash(GetScriptForRawPubKey(coinbaseKey.GetPubKey()), txToSign, 0, SIGHASH_ALL, 0, SIGVERSION_BASE);
+    BOOST_CHECK(coinbaseKey.Sign(hash, vchSig));
+    vchSig.push_back((unsigned char)SIGHASH_ALL);
+    mtx.vin[0].scriptSig << vchSig;
+
+    // Create a block with the bribe
+    std::vector<CMutableTransaction> vout;
+    vout.push_back(mtx);
+
+    CreateAndProcessBlock(vout, GetScriptForRawPubKey(coinbaseKey.GetPubKey()));
+
+    BOOST_CHECK(chainActive.Height() == 102);
 }
 
 BOOST_AUTO_TEST_CASE(invalid)
 {
-    // Things to check:
-    // invalid locktime / blockheight
-    // invalid nSidechain
-    // invalid (null) hashCritical in tx
-    // valid hashCritical in tx, but missing from coinbase
+    // Test in block with a valid data & commit but invalid locktime
+    BOOST_CHECK(chainActive.Height() == 100);
+
+    // Generate a block
+    CreateAndProcessBlock({}, GetScriptForRawPubKey(coinbaseKey.GetPubKey()));
+
+    // Checking that we can make blocks normally
+    BOOST_CHECK(chainActive.Height() == 101);
+
+    // create transaction with critical data
+    CMutableTransaction mtx;
+    mtx.nVersion = 2;
+    mtx.vin.resize(1);
+    mtx.vout.resize(1);
+    mtx.vin[0].prevout.hash = coinbaseTxns[0].GetHash();
+    mtx.vin[0].prevout.n = 0;
+    mtx.vout[0].scriptPubKey = CScript() << OP_0;
+    mtx.vout[0].nValue = 50 * CENT;
+
+    // Set locktime to the block we would like critical data to be commited in
+    mtx.nLockTime = 2600;
+
+    // Add critical data
+    mtx.criticalData.n = 42;
+    mtx.criticalData.hashCritical = GetRandHash();
+
+    // Sign
+    const CTransaction txToSign(mtx);
+    std::vector<unsigned char> vchSig;
+    uint256 hash = SignatureHash(GetScriptForRawPubKey(coinbaseKey.GetPubKey()), txToSign, 0, SIGHASH_ALL, 0, SIGVERSION_BASE);
+    BOOST_CHECK(coinbaseKey.Sign(hash, vchSig));
+    vchSig.push_back((unsigned char)SIGHASH_ALL);
+    mtx.vin[0].scriptSig << vchSig;
+
+    // Create a block with the bribe
+    std::vector<CMutableTransaction> vout;
+    vout.push_back(mtx);
+
+    CreateAndProcessBlock(vout, GetScriptForRawPubKey(coinbaseKey.GetPubKey()));
+
+    // Block should have been rejected, blockheight should be unchanged
+    BOOST_CHECK(chainActive.Height() == 101);
+
 }
 
 BOOST_AUTO_TEST_SUITE_END()
