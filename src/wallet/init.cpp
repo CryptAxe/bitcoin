@@ -290,6 +290,7 @@ void StartWallets(CScheduler& scheduler) {
     for (CWalletRef pwallet : vpwallets) {
         pwallet->postInitProcess(scheduler);
 
+        /*
         bool drivechainsEnabled = IsDrivechainEnabled(chainActive.Tip(), Params().GetConsensus());
         if (drivechainsEnabled) {
             LOCK(pwallet->cs_wallet);
@@ -300,7 +301,7 @@ void StartWallets(CScheduler& scheduler) {
                 std::vector<unsigned char> data(ParseHex(std::string(sidechain.sidechainHex)));
                 CScript script(data.begin(), data.end());
                 if (!pwallet->HaveWatchOnly(script)) {
-                    pwallet->AddWatchOnly(script, 0 /* nCreateTime */);
+                    pwallet->AddWatchOnly(script, 0);
                 }
 
                 CTxDestination destination;
@@ -309,6 +310,7 @@ void StartWallets(CScheduler& scheduler) {
                 }
             }
         }
+        */
     }
 }
 
