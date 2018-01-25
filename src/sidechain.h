@@ -47,8 +47,8 @@ struct SidechainDeposit {
 };
 
 struct SidechainLD {
-    int8_t nSidechain;
-    int16_t nPrevBlockRef;
+    uint8_t nSidechain;
+    uint16_t nPrevBlockRef;
     uint256 hashCritical;
 
     bool operator==(const SidechainLD& a) const;

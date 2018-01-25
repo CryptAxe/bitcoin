@@ -32,28 +32,36 @@ public:
     //! unspent transaction output
     CTxOut out;
 
-    //! whether containing transaction was a coinbase
-    unsigned int fCoinBase : 1;
-
-    //! whether containing transaction was a coinbase
-    bool fCriticalData;
-
     //! at which height this containing transaction was included in the active block chain
     uint32_t nHeight : 31;
 
+    //! whether containing transaction was a coinbase
+    unsigned int fCoinBase : 1;
+
+    //! whether containing transaction has critical data
+    bool fCriticalData;
+
+    //! TODO Memory Only
+    uint8_t nSidechain;
+    uint16_t nPrevBlockRef;
+    uint256 hashCritical;
+
     //! construct a Coin from a CTxOut and height/coinbase information.
-    Coin(CTxOut&& outIn, int nHeightIn, bool fCoinBaseIn, bool fCriticalDataIn) : out(std::move(outIn)), fCoinBase(fCoinBaseIn), fCriticalData(fCriticalDataIn), nHeight(nHeightIn) {}
-    Coin(const CTxOut& outIn, int nHeightIn, bool fCoinBaseIn, bool fCriticalDataIn) : out(outIn), fCoinBase(fCoinBaseIn), fCriticalData(fCriticalDataIn), nHeight(nHeightIn) {}
+    Coin(CTxOut&& outIn, int nHeightIn, bool fCoinBaseIn, bool fCriticalDataIn, uint8_t nSidechainIn = 0, uint16_t nPrevBlockRefIn = 0, uint256 hashCriticalIn = uint256()) : out(std::move(outIn)), nHeight(nHeightIn), fCoinBase(fCoinBaseIn), fCriticalData(fCriticalDataIn), nSidechain(nSidechainIn), nPrevBlockRef(nPrevBlockRefIn), hashCritical(hashCriticalIn) {}
+    Coin(const CTxOut& outIn, int nHeightIn, bool fCoinBaseIn, bool fCriticalDataIn, uint8_t nSidechainIn = 0, uint16_t nPrevBlockRefIn = 0, uint256 hashCriticalIn = uint256()) : out(outIn), nHeight(nHeightIn), fCoinBase(fCoinBaseIn), fCriticalData(fCriticalDataIn), nSidechain(nSidechainIn), nPrevBlockRef(nPrevBlockRefIn), hashCritical(hashCriticalIn) {}
 
     void Clear() {
         out.SetNull();
         fCoinBase = false;
         fCriticalData = false;
+        nSidechain = 0;
+        nPrevBlockRef = 0;
+        hashCritical.SetNull();
         nHeight = 0;
     }
 
     //! empty constructor
-    Coin() : fCoinBase(false), fCriticalData(false), nHeight(0) { }
+    Coin() : nHeight(0), fCoinBase(false), fCriticalData(false), nSidechain(0), nPrevBlockRef(0), hashCritical(uint256()) { }
 
     bool IsCoinBase() const {
         return fCoinBase;
@@ -69,6 +77,9 @@ public:
         uint32_t code = nHeight * 2 + fCoinBase;
         ::Serialize(s, VARINT(code));
         ::Serialize(s, fCriticalData);
+        ::Serialize(s, VARINT(nSidechain));
+        ::Serialize(s, VARINT(nPrevBlockRef));
+        ::Serialize(s, hashCritical);
         ::Serialize(s, CTxOutCompressor(REF(out)));
     }
 
@@ -79,6 +90,9 @@ public:
         nHeight = code >> 1;
         fCoinBase = code & 1;
         ::Unserialize(s, fCriticalData);
+        ::Unserialize(s, VARINT(nSidechain));
+        ::Unserialize(s, VARINT(nPrevBlockRef));
+        ::Unserialize(s, hashCritical);
         ::Unserialize(s, REF(CTxOutCompressor(out)));
     }
 

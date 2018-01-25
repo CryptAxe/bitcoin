@@ -14,6 +14,7 @@
 #include "policy/policy.h"
 #include "policy/fees.h"
 #include "reverse_iterator.h"
+#include "sidechain.h"
 #include "sidechaindb.h"
 #include "streams.h"
 #include "timedata.h"
@@ -543,11 +544,18 @@ void CTxMemPool::removeForReorg(const CCoinsViewCache *pcoins, unsigned int nMem
                     break;
                 }
 
-                // TODO BMM ratchet blocks_atop check
-                //if (coin->fCriticalData && (scdb.CountBlocksAtop(coins->criticalData) < BMM_REQUEST_MATURITY)))) {
-                //    txToRemove.insert(it);
-                //    break;
-                //}
+                // Check BMM ratchet maturity
+                if (!coin.hashCritical.IsNull()) {
+                    SidechainLD ld;
+                    ld.nSidechain = coin.nSidechain;
+                    ld.nPrevBlockRef = coin.nPrevBlockRef;
+                    ld.hashCritical = coin.hashCritical;
+
+                    if (scdb.CountBlocksAtop(ld) < BMM_RATCHET_MATURITY) {
+                        txToRemove.insert(it);
+                        break;
+                    }
+                }
             }
         }
         if (!validLP) {
@@ -917,7 +925,17 @@ bool CCoinsViewMemPool::GetCoin(const COutPoint &outpoint, Coin &coin) const {
     CTransactionRef ptx = mempool.get(outpoint.hash);
     if (ptx) {
         if (outpoint.n < ptx->vout.size()) {
-            coin = Coin(ptx->vout[outpoint.n], MEMPOOL_HEIGHT, false, !ptx->criticalData.IsNull());
+            if (ptx->criticalData.IsNull()) {
+                coin = Coin(ptx->vout[outpoint.n], MEMPOOL_HEIGHT, false, false);
+            } else {
+                uint8_t nSidechain;
+                uint16_t nPrevBlockRef;
+                if (ptx->criticalData.IsBMMRequest(nSidechain, nPrevBlockRef)) {
+                    coin = Coin(ptx->vout[outpoint.n], MEMPOOL_HEIGHT, false, true, nSidechain, nPrevBlockRef, ptx->criticalData.hashCritical);
+                } else {
+                    coin = Coin(ptx->vout[outpoint.n], MEMPOOL_HEIGHT, false, true);
+                }
+            }
             return true;
         } else {
             return false;

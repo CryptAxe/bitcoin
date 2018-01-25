@@ -808,15 +808,6 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
                     fSpendsCriticalData = true;
                     break;
                 }
-                // TODO check maturity / blocks atop?
-                //if (coins.fCriticalData && coins.criticalData.IsBMMRequest()) {
-                //    // Check maturity
-                //    if (scdb.CountBlocksAtop(coins.criticalData) < BMM_REQUEST_MATURITY)
-                //        return state.Invalid(false, REJECT_INVALID, "bad-txn-immature-bmm-request");
-
-                //    fSpendsBMMRequest = true;
-                //    break;
-                //}
             }
         }
 
@@ -1498,23 +1489,36 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
                 return true;
             }
 
+            bool fDrivechainsEnabled = IsDrivechainEnabled(chainActive.Tip(), Params().GetConsensus());
+
             for (unsigned int i = 0; i < tx.vin.size(); i++) {
                 const COutPoint &prevout = tx.vin[i].prevout;
                 const Coin& coin = inputs.AccessCoin(prevout);
                 assert(!coin.IsSpent());
+
+                // Check ratchet maturity
+                if (fDrivechainsEnabled) {
+                    if (coin.IsCriticalData()) {
+                        if (coin.hashCritical.IsNull()) {
+                            if ((chainActive.Height() - coin.nHeight) < CRITICAL_DATA_MATURITY)
+                                return state.Invalid(false, REJECT_INVALID, "bad-block-txn-immature-critical-data");
+                        } else {
+                            // BMM request critical data
+                            SidechainLD ld;
+                            ld.nSidechain = coin.nSidechain;
+                            ld.nPrevBlockRef = coin.nPrevBlockRef;
+                            ld.hashCritical = coin.hashCritical;
+                            if (scdb.CountBlocksAtop(ld) < BMM_RATCHET_MATURITY)
+                                return state.Invalid(false, REJECT_INVALID, "bad-block-txn-immature-bmm-request");
+                        }
+                    }
+                }
 
                 // We very carefully only pass in things to CScriptCheck which
                 // are clearly committed to by tx' witness hash. This provides
                 // a sanity check that our caching is not introducing consensus
                 // failures through additional data in, eg, the coins being
                 // spent being checked as a part of CScriptCheck.
-
-                // TODO Check ratchet blocks_atop
-                if (IsDrivechainEnabled(chainActive.Tip(), Params().GetConsensus())) {
-                    //if (coin.IsBMMRequest()) {
-                    //  if (scdb.CountBlocksAtop(coin.criticalData) < BMM_REQUEST_MATURITY)
-                    //      return state.Invalid(false, REJECT_INVALID, "bad-block-txn-immature-bmm-request");
-                }
 
                 // Verify signature
                 CScriptCheck check(coin.out, tx, i, flags, cacheSigStore, &txdata);
