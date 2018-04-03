@@ -4,6 +4,20 @@
 
 #include <qt/walletmodel.h>
 
+/* Bitcoin Hivemind models that need to be registered */
+#include "ballotballottablemodel.h"
+#include "ballotoutcometablemodel.h"
+#include "ballotsealedvotetablemodel.h"
+#include "ballotvotetablemodel.h"
+#include "decisionbranchtablemodel.h"
+#include "decisiondecisiontablemodel.h"
+#include "decisionmarkettablemodel.h"
+#include "decisiontradetablemodel.h"
+#include "marketmodel.h"
+#include "resolvevotecoltablemodel.h"
+#include "resolvevoterowtablemodel.h"
+#include "resolvevoteinputtablemodel.h"
+
 #include <qt/addresstablemodel.h>
 #include <consensus/validation.h>
 #include <qt/guiconstants.h>
@@ -39,6 +53,14 @@
 
 WalletModel::WalletModel(const PlatformStyle *platformStyle, CWallet *_wallet, OptionsModel *_optionsModel, QObject *parent) :
     QObject(parent), wallet(_wallet), optionsModel(_optionsModel), addressTableModel(0),
+    decisionBranchTableModel(0),
+    decisionDecisionTableModel(0),
+    decisionMarketTableModel(0),
+    decisionTradeTableModel(0),
+    marketModel(0),
+    resolveVoteColTableModel(0),
+    resolveVoteRowTableModel(0),
+    resolveVoteInputTableModel(0),
     transactionTableModel(0),
     recentRequestsTableModel(0),
     cachedBalance(0), cachedUnconfirmedBalance(0), cachedImmatureBalance(0),
@@ -50,6 +72,19 @@ WalletModel::WalletModel(const PlatformStyle *platformStyle, CWallet *_wallet, O
     fForceCheckBalanceChanged = false;
 
     addressTableModel = new AddressTableModel(wallet, this);
+    ballotBranchTableModel = new DecisionBranchTableModel(wallet, this);
+    ballotBallotTableModel = new BallotBallotTableModel(wallet, this);
+    ballotOutcomeTableModel = new BallotOutcomeTableModel(wallet, this);
+    ballotSealedVoteTableModel = new BallotSealedVoteTableModel(wallet, this);
+    ballotVoteTableModel = new BallotVoteTableModel(wallet, this);
+    decisionBranchTableModel = new DecisionBranchTableModel(wallet, this);
+    decisionDecisionTableModel = new DecisionDecisionTableModel(wallet, this);
+    decisionMarketTableModel = new DecisionMarketTableModel(wallet, this);
+    decisionTradeTableModel = new DecisionTradeTableModel(wallet, this);
+    marketModel = new MarketModel(wallet, this);
+    resolveVoteColTableModel = new ResolveVoteColTableModel();
+    resolveVoteRowTableModel = new ResolveVoteRowTableModel();
+    resolveVoteInputTableModel = new ResolveVoteInputTableModel();
     transactionTableModel = new TransactionTableModel(platformStyle, wallet, this);
     recentRequestsTableModel = new RecentRequestsTableModel(wallet, this);
 
@@ -382,6 +417,71 @@ OptionsModel *WalletModel::getOptionsModel()
 AddressTableModel *WalletModel::getAddressTableModel()
 {
     return addressTableModel;
+}
+
+DecisionBranchTableModel *WalletModel::getBallotBranchTableModel()
+{
+    return ballotBranchTableModel;
+}
+
+BallotBallotTableModel *WalletModel::getBallotBallotTableModel()
+{
+    return ballotBallotTableModel;
+}
+
+BallotOutcomeTableModel *WalletModel::getBallotOutcomeTableModel()
+{
+    return ballotOutcomeTableModel;
+}
+
+BallotSealedVoteTableModel *WalletModel::getBallotSealedVoteTableModel()
+{
+    return ballotSealedVoteTableModel;
+}
+
+BallotVoteTableModel *WalletModel::getBallotVoteTableModel()
+{
+    return ballotVoteTableModel;
+}
+
+DecisionBranchTableModel *WalletModel::getDecisionBranchTableModel()
+{
+    return decisionBranchTableModel;
+}
+
+DecisionDecisionTableModel *WalletModel::getDecisionDecisionTableModel()
+{
+    return decisionDecisionTableModel;
+}
+
+DecisionMarketTableModel *WalletModel::getDecisionMarketTableModel()
+{
+    return decisionMarketTableModel;
+}
+
+DecisionTradeTableModel *WalletModel::getDecisionTradeTableModel()
+{
+    return decisionTradeTableModel;
+}
+
+MarketModel *WalletModel::getMarketModel()
+{
+    return marketModel;
+}
+
+ResolveVoteColTableModel *WalletModel::getResolveVoteColTableModel()
+{
+    return resolveVoteColTableModel;
+}
+
+ResolveVoteRowTableModel *WalletModel::getResolveVoteRowTableModel()
+{
+    return resolveVoteRowTableModel;
+}
+
+ResolveVoteInputTableModel *WalletModel::getResolveVoteInputTableModel()
+{
+    return resolveVoteInputTableModel;
 }
 
 TransactionTableModel *WalletModel::getTransactionTableModel()

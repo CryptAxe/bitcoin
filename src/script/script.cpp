@@ -7,6 +7,7 @@
 
 #include <tinyformat.h>
 #include <utilstrencodings.h>
+#include <primitives/market.h>
 
 const char* GetOpName(opcodetype opcode)
 {
@@ -141,6 +142,8 @@ const char* GetOpName(opcodetype opcode)
 
     case OP_INVALIDOPCODE          : return "OP_INVALIDOPCODE";
 
+    case OP_MARKET                 : return "OP_MARKET";
+
     // Note:
     //  The template matching params OP_SMALLINTEGER/etc are defined in opcodetype enum
     //  as kind of implementation hack, they are *NOT* real opcodes.  If found in real
@@ -206,6 +209,72 @@ bool CScript::IsPayToScriptHash() const
             (*this)[0] == OP_HASH160 &&
             (*this)[1] == 0x14 &&
             (*this)[22] == OP_EQUAL);
+}
+
+bool CScript::IsMarketScript(std::vector<unsigned char> &hashBytes) const
+{
+    bool ret = false;
+
+    size_t sz = this->size();
+
+    if (sz < 2)
+       return ret;
+
+    if ((*this)[sz - 1] != OP_MARKET)
+       return ret;
+
+    marketObj *obj = marketObjCtr(*this);
+    if (!obj)
+       return ret;
+
+    if (obj->marketop == 'B') { /* branch */
+       ret = true;
+    }
+    else
+    if (obj->marketop == 'D') {
+       marketDecision *ptr = (marketDecision *) obj;
+       hashBytes = std::vector<unsigned char> (ptr->keyID.begin(), ptr->keyID.end());
+       delete ptr;
+       ret = true;
+    }
+    else
+    if (obj->marketop == 'L') { /* steal vote */
+       ret = true;
+    }
+    else
+    if (obj->marketop == 'M') { /* market */
+       marketMarket *ptr = (marketMarket *) obj;
+       hashBytes = vector<unsigned char> (ptr->keyID.begin(), ptr->keyID.end());
+       delete ptr;
+       ret = true;
+    }
+    else
+    if (obj->marketop == 'O') { /* outcome */
+       ret = true;
+    }
+    else
+    if (obj->marketop == 'R') { /* reveal vote */
+       ret = true;
+    }
+    else
+    if (obj->marketop == 'S') { /* sealed vote */
+       ret = true;
+    }
+    else
+    if (obj->marketop == 'T') { /* trade */
+       marketTrade *ptr = (marketTrade *) obj;
+       hashBytes = vector<unsigned char> (ptr->keyID.begin(), ptr->keyID.end());
+       delete ptr;
+       ret = true;
+    }
+
+    return ret;
+}
+
+bool CScript::IsMarketScript(void) const
+{
+    vector<unsigned char> hashBytes;
+    return IsMarketScript(hashBytes);
 }
 
 bool CScript::IsPayToWitnessScriptHash() const

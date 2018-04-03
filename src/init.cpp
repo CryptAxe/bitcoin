@@ -244,7 +244,9 @@ void Shutdown()
         pcoinscatcher.reset();
         pcoinsdbview.reset();
         pblocktree.reset();
+        pmarkettree.reset();
     }
+
     g_wallet_init_interface->Stop();
 
 #if ENABLE_ZMQ
@@ -409,7 +411,7 @@ std::string HelpMessage(HelpMessageMode mode)
     strUsage += HelpMessageOpt("-whitelist=<IP address or network>", _("Whitelist peers connecting from the given IP address (e.g. 1.2.3.4) or CIDR notated network (e.g. 1.2.3.0/24). Can be specified multiple times.") +
         " " + _("Whitelisted peers cannot be DoS banned and their transactions are always relayed, even if they are already in the mempool, useful e.g. for a gateway"));
 
-    strUsage += g_wallet_init_interface->GetHelpString(showDebug);
+    g_wallet_init_interface->GetHelpString(showDebug);
 
 #if ENABLE_ZMQ
     strUsage += HelpMessageGroup(_("ZeroMQ notification options:"));
@@ -420,7 +422,8 @@ std::string HelpMessage(HelpMessageMode mode)
 #endif
 
     strUsage += HelpMessageGroup(_("Debugging/Testing options:"));
-    if (showDebug) {
+    if (showDebug)
+    {
         strUsage += HelpMessageOpt("-checkblocks=<n>", strprintf(_("How many blocks to check at startup (default: %u, 0 = all)"), DEFAULT_CHECKBLOCKS));
         strUsage += HelpMessageOpt("-checklevel=<n>", strprintf(_("How thorough the block verification of -checkblocks is (0-4, default: %u)"), DEFAULT_CHECKLEVEL));
         strUsage += HelpMessageOpt("-checkblockindex", strprintf("Do a full consistency check for mapBlockIndex, setBlockIndexCandidates, chainActive and mapBlocksUnlinked occasionally. (default: %u)", defaultChainParams->DefaultConsistencyChecks()));
@@ -430,6 +433,7 @@ std::string HelpMessage(HelpMessageMode mode)
         strUsage += HelpMessageOpt("-deprecatedrpc=<method>", "Allows deprecated RPC method(s) to be used");
         strUsage += HelpMessageOpt("-testsafemode", strprintf("Force safe mode (default: %u)", DEFAULT_TESTSAFEMODE));
         strUsage += HelpMessageOpt("-dropmessagestest=<n>", "Randomly drop 1 of every <n> network messages");
+        strUsage += HelpMessageOpt("-fuzzmessagestest=<n>", "Randomly fuzz 1 of every <n> network messages");
         strUsage += HelpMessageOpt("-stopafterblockimport", strprintf("Stop running after importing blocks from disk (default: %u)", DEFAULT_STOPAFTERBLOCKIMPORT));
         strUsage += HelpMessageOpt("-stopatheight", strprintf("Stop running after reaching the given height in the main chain (default: %u)", DEFAULT_STOPATHEIGHT));
 
@@ -634,6 +638,7 @@ void ThreadImport(std::vector<fs::path> vImportFiles)
             nFile++;
         }
         pblocktree->WriteReindexing(false);
+        pmarkettree->WriteReindexing(false);
         fReindex = false;
         LogPrintf("Reindexing finished\n");
         // To avoid ending up in a situation without genesis block, re-try initializing (no-op if reindexing worked):
@@ -1076,7 +1081,8 @@ bool AppInitParameterInteraction()
         return InitError(strprintf("acceptnonstdtxn is not currently supported for %s chain", chainparams.NetworkIDString()));
     nBytesPerSigOp = gArgs.GetArg("-bytespersigop", nBytesPerSigOp);
 
-    if (!g_wallet_init_interface->ParameterInteraction()) return false;
+    if (!g_wallet_init_interface->ParameterInteraction())
+        return false;
 
     fIsBareMultisigStd = gArgs.GetBoolArg("-permitbaremultisig", DEFAULT_PERMIT_BAREMULTISIG);
     fAcceptDatacarrier = gArgs.GetBoolArg("-datacarrier", DEFAULT_ACCEPT_DATACARRIER);
@@ -1259,7 +1265,8 @@ bool AppInitMain()
     int64_t nStart;
 
     // ********************************************************* Step 5: verify wallet database integrity
-    if (!g_wallet_init_interface->Verify()) return false;
+    if (!g_wallet_init_interface->Verify())
+        return false;
 
     // ********************************************************* Step 6: network initialization
     // Note that we absolutely cannot open any actual connections
@@ -1386,6 +1393,9 @@ bool AppInitMain()
     int64_t nBlockTreeDBCache = nTotalCache / 8;
     nBlockTreeDBCache = std::min(nBlockTreeDBCache, (gArgs.GetBoolArg("-txindex", DEFAULT_TXINDEX) ? nMaxBlockDBAndTxIndexCache : nMaxBlockDBCache) << 20);
     nTotalCache -= nBlockTreeDBCache;
+    int64_t nMarketTreeDBCache = nTotalCache / 8;
+    nMarketTreeDBCache = std::min(nMarketTreeDBCache, (gArgs.GetBoolArg("-txindex", DEFAULT_TXINDEX) ? nMaxBlockDBAndTxIndexCache : nMaxBlockDBCache) << 20);
+    nTotalCache -= nMarketTreeDBCache;
     int64_t nCoinDBCache = std::min(nTotalCache / 2, (nTotalCache / 4) + (1 << 23)); // use 25%-50% of the remainder for disk cache
     nCoinDBCache = std::min(nCoinDBCache, nMaxCoinsDBCache << 20); // cap total coins db cache
     nTotalCache -= nCoinDBCache;
@@ -1417,8 +1427,12 @@ bool AppInitMain()
                 pblocktree.reset();
                 pblocktree.reset(new CBlockTreeDB(nBlockTreeDBCache, false, fReset));
 
+                pmarkettree.reset();
+                pmarkettree.reset(new CMarketTreeDB(nMarketTreeDBCache, false, fReset));
+
                 if (fReset) {
                     pblocktree->WriteReindexing(true);
+                    pmarkettree->WriteReindexing(true);
                     //If we're reindexing in prune mode, wipe away unusable block files and all undo data files
                     if (fPruneMode)
                         CleanupBlockRevFiles();
@@ -1578,7 +1592,8 @@ bool AppInitMain()
     fFeeEstimatesInitialized = true;
 
     // ********************************************************* Step 8: load wallet
-    if (!g_wallet_init_interface->Open()) return false;
+    if (!g_wallet_init_interface->Open())
+        return false;
 
     // ********************************************************* Step 9: data directory maintenance
 

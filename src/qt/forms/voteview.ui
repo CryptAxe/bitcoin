@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>VoteView</class>
+ <widget class="QWidget" name="VoteView">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1017</width>
+    <height>713</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QFrame" name="frame">
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_4">
+      <item>
+       <widget class="QGroupBox" name="groupBoxSelect">
+        <property name="title">
+         <string>1. Select Decision to vote on:</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_4">
+         <item row="0" column="0">
+          <widget class="QLabel" name="labelBranch">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>Branch:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QComboBox" name="comboBoxBranch">
+           <item>
+            <property name="text">
+             <string>Main</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item row="0" column="2" rowspan="2">
+          <widget class="QPushButton" name="pushButtonSelectDecision">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>60</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Select Decision</string>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>20</width>
+             <height>20</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="labelDecisions">
+           <property name="text">
+            <string>Decision:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="lineEditDecisionID"/>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QFrame" name="frame_2">
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_5">
+      <item>
+       <widget class="QGroupBox" name="groupBox">
+        <property name="title">
+         <string>2. Select your vote:</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_6">
+         <item>
+          <widget class="QComboBox" name="comboBoxVote">
+           <property name="currentIndex">
+            <number>1</number>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>40</width>
+             <height>40</height>
+            </size>
+           </property>
+           <item>
+            <property name="text">
+             <string>0</string>
+            </property>
+            <property name="icon">
+             <iconset resource="../hivemind.qrc">
+              <normaloff>:/icons/quit</normaloff>:/icons/quit</iconset>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>1</string>
+            </property>
+            <property name="icon">
+             <iconset resource="../hivemind.qrc">
+              <normaloff>:/icons/transaction_confirmed</normaloff>:/icons/transaction_confirmed</iconset>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>NA</string>
+            </property>
+            <property name="icon">
+             <iconset resource="../hivemind.qrc">
+              <normaloff>:/icons/transaction_0</normaloff>:/icons/transaction_0</iconset>
+            </property>
+           </item>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QFrame" name="frame_3">
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_8">
+      <item>
+       <widget class="QGroupBox" name="groupBox_2">
+        <property name="title">
+         <string>3. Cast your vote:</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_7">
+         <item>
+          <widget class="QFrame" name="frame_4">
+           <property name="frameShape">
+            <enum>QFrame::StyledPanel</enum>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Raised</enum>
+           </property>
+           <layout class="QHBoxLayout" name="horizontalLayout">
+            <item>
+             <widget class="QLabel" name="label_2">
+              <property name="text">
+               <string>Votecoin Address:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="lineEditVotecoinAddress"/>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="Line" name="line">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QTabWidget" name="tabWidget">
+           <property name="currentIndex">
+            <number>0</number>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>40</width>
+             <height>40</height>
+            </size>
+           </property>
+           <widget class="QWidget" name="sealed">
+            <attribute name="icon">
+             <iconset resource="../hivemind.qrc">
+              <normaloff>:/icons/lock_closed</normaloff>:/icons/lock_closed</iconset>
+            </attribute>
+            <attribute name="title">
+             <string>Sealed Vote</string>
+            </attribute>
+            <layout class="QVBoxLayout" name="verticalLayout_2">
+             <item>
+              <widget class="QLabel" name="label_3">
+               <property name="text">
+                <string>Height:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QSpinBox" name="spinBoxHeight">
+               <property name="maximum">
+                <number>999999999</number>
+               </property>
+               <property name="singleStep">
+                <number>280</number>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButtonCreateSealedVote">
+               <property name="text">
+                <string>Submit Sealed Vote</string>
+               </property>
+               <property name="icon">
+                <iconset resource="../hivemind.qrc">
+                 <normaloff>:/icons/ballot</normaloff>:/icons/ballot</iconset>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>20</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="revealed">
+            <attribute name="icon">
+             <iconset resource="../hivemind.qrc">
+              <normaloff>:/icons/lock_open</normaloff>:/icons/lock_open</iconset>
+            </attribute>
+            <attribute name="title">
+             <string>Revealed Vote</string>
+            </attribute>
+            <layout class="QVBoxLayout" name="verticalLayout_3">
+             <item>
+              <widget class="QLabel" name="label">
+               <property name="text">
+                <string>Sealed Vote ID:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="lineEditSealedVoteID"/>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButtonCreateRevealVote">
+               <property name="text">
+                <string>Submit Revealed Vote</string>
+               </property>
+               <property name="icon">
+                <iconset resource="../hivemind.qrc">
+                 <normaloff>:/icons/ballot</normaloff>:/icons/ballot</iconset>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>20</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+            </layout>
+            <zorder>pushButtonCreateRevealVote</zorder>
+            <zorder>lineEditSealedVoteID</zorder>
+            <zorder>label</zorder>
+           </widget>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer_2">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+  </layout>
+ </widget>
+ <resources>
+  <include location="../hivemind.qrc"/>
+ </resources>
+ <connections/>
+</ui>

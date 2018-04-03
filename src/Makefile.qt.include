@@ -97,10 +97,18 @@ QT_TS = \
 QT_FORMS_UI = \
   qt/forms/addressbookpage.ui \
   qt/forms/askpassphrasedialog.ui \
+  qt/forms/authorview.ui \
   qt/forms/coincontroldialog.ui \
+  qt/forms/combocreationwidget.ui \
+  qt/forms/decisioncreationwidget.ui \
+  qt/forms/decisionmarketcreationwidget.ui \
+  qt/forms/decisionselectionview.ui \
   qt/forms/editaddressdialog.ui \
   qt/forms/helpmessagedialog.ui \
   qt/forms/intro.ui \
+  qt/forms/marketgraphwidget.ui \
+  qt/forms/marketview.ui \
+  qt/forms/markettradeview.ui \
   qt/forms/modaloverlay.ui \
   qt/forms/openuridialog.ui \
   qt/forms/optionsdialog.ui \
@@ -111,13 +119,30 @@ QT_FORMS_UI = \
   qt/forms/sendcoinsdialog.ui \
   qt/forms/sendcoinsentry.ui \
   qt/forms/signverifymessagedialog.ui \
-  qt/forms/transactiondescdialog.ui
+  qt/forms/transactiondescdialog.ui \
+  qt/forms/voteview.ui
 
 QT_MOC_CPP = \
   qt/moc_addressbookpage.cpp \
   qt/moc_addresstablemodel.cpp \
   qt/moc_askpassphrasedialog.cpp \
+  qt/moc_authorview.cpp \
+  qt/moc_authorpendingtablemodel.cpp \
   qt/moc_bantablemodel.cpp \
+  qt/moc_ballotview.cpp \
+  qt/moc_ballotballotwindow.cpp \
+  qt/moc_ballotballotfilterproxymodel.cpp \
+  qt/moc_ballotballottablemodel.cpp \
+  qt/moc_ballotbranchwindow.cpp \
+  qt/moc_ballotoutcomewindow.cpp \
+  qt/moc_ballotoutcomefilterproxymodel.cpp \
+  qt/moc_ballotoutcometablemodel.cpp \
+  qt/moc_ballotsealedvotefilterproxymodel.cpp \
+  qt/moc_ballotsealedvotewindow.cpp \
+  qt/moc_ballotsealedvotetablemodel.cpp \
+  qt/moc_ballotvotefilterproxymodel.cpp \
+  qt/moc_ballotvotewindow.cpp \
+  qt/moc_ballotvotetablemodel.cpp \
   qt/moc_bitcoinaddressvalidator.cpp \
   qt/moc_bitcoinamountfield.cpp \
   qt/moc_bitcoingui.cpp \
@@ -126,12 +151,37 @@ QT_MOC_CPP = \
   qt/moc_clientmodel.cpp \
   qt/moc_coincontroldialog.cpp \
   qt/moc_coincontroltreewidget.cpp \
+  qt/moc_combocreationwidget.cpp \
   qt/moc_csvmodelwriter.cpp \
+  qt/moc_decisionbranchfilterproxymodel.cpp \
+  qt/moc_decisionbranchtablemodel.cpp \
+  qt/moc_decisionbranchwindow.cpp \
+  qt/moc_decisiondecisionfilterproxymodel.cpp \
+  qt/moc_decisiondecisiontablemodel.cpp \
+  qt/moc_decisiondecisionwindow.cpp \
+  qt/moc_decisionmarketfilterproxymodel.cpp \
+  qt/moc_decisionmarkettablemodel.cpp \
+  qt/moc_decisionmarketwindow.cpp \
+  qt/moc_decisiontradefilterproxymodel.cpp \
+  qt/moc_decisiontradetablemodel.cpp \
+  qt/moc_decisiontradewindow.cpp \
+  qt/moc_decisionview.cpp \
+  qt/moc_decisionviewgraph.cpp \
+  qt/moc_decisioncreationwidget.cpp \
+  qt/moc_decisionmarketcreationwidget.cpp \
+  qt/moc_decisionselectionview.cpp \
+  qt/moc_decisionselectionmodel.cpp \
   qt/moc_editaddressdialog.cpp \
   qt/moc_guiutil.cpp \
+  qt/moc_hivemindrecenttablemodel.cpp \
   qt/moc_intro.cpp \
   qt/moc_macdockiconhandler.cpp \
   qt/moc_macnotificationhandler.cpp \
+  qt/moc_marketgraphwidget.cpp \
+  qt/moc_marketmodel.cpp \
+  qt/moc_markettradeview.cpp \
+  qt/moc_marketview.cpp \
+  qt/moc_marketviewgraph.cpp \
   qt/moc_modaloverlay.cpp \
   qt/moc_notificator.cpp \
   qt/moc_openuridialog.cpp \
@@ -140,11 +190,17 @@ QT_MOC_CPP = \
   qt/moc_overviewpage.cpp \
   qt/moc_peertablemodel.cpp \
   qt/moc_paymentserver.cpp \
+  qt/moc_qcustomplot.cpp \
   qt/moc_qvalidatedlineedit.cpp \
   qt/moc_qvaluecombobox.cpp \
   qt/moc_receivecoinsdialog.cpp \
   qt/moc_receiverequestdialog.cpp \
   qt/moc_recentrequeststablemodel.cpp \
+  qt/moc_resolvevotedialog.cpp \
+  qt/moc_resolvevotegraph.cpp \
+  qt/moc_resolvevotecoltablemodel.cpp \
+  qt/moc_resolvevoterowtablemodel.cpp \
+  qt/moc_resolvevoteinputtablemodel.cpp \
   qt/moc_rpcconsole.cpp \
   qt/moc_sendcoinsdialog.cpp \
   qt/moc_sendcoinsentry.cpp \
@@ -157,6 +213,7 @@ QT_MOC_CPP = \
   qt/moc_transactiontablemodel.cpp \
   qt/moc_transactionview.cpp \
   qt/moc_utilitydialog.cpp \
+  qt/moc_voteview.cpp \
   qt/moc_walletframe.cpp \
   qt/moc_walletmodel.cpp \
   qt/moc_walletview.cpp
@@ -166,15 +223,15 @@ BITCOIN_MM = \
   qt/macnotificationhandler.mm
 
 QT_MOC = \
-  qt/bitcoin.moc \
+  qt/hivemind.moc \
   qt/bitcoinamountfield.moc \
   qt/callback.moc \
   qt/intro.moc \
   qt/overviewpage.moc \
   qt/rpcconsole.moc
 
-QT_QRC_CPP = qt/qrc_bitcoin.cpp
-QT_QRC = qt/bitcoin.qrc
+QT_QRC_CPP = qt/qrc_hivemind.cpp
+QT_QRC = qt/hivemind.qrc
 QT_QRC_LOCALE_CPP = qt/qrc_bitcoin_locale.cpp
 QT_QRC_LOCALE = qt/bitcoin_locale.qrc
 
@@ -186,6 +243,22 @@ BITCOIN_QT_H = \
   qt/addressbookpage.h \
   qt/addresstablemodel.h \
   qt/askpassphrasedialog.h \
+  qt/authorview.h \
+  qt/authorpendingtablemodel.h \
+  qt/ballotview.h \
+  qt/ballotballotfilterproxymodel.h \
+  qt/ballotballottablemodel.h \
+  qt/ballotballotwindow.h \
+  qt/ballotbranchwindow.h \
+  qt/ballotoutcomefilterproxymodel.h \
+  qt/ballotoutcometablemodel.h \
+  qt/ballotoutcomewindow.h \
+  qt/ballotsealedvotefilterproxymodel.h \
+  qt/ballotsealedvotetablemodel.h \
+  qt/ballotsealedvotewindow.h \
+  qt/ballotvotefilterproxymodel.h \
+  qt/ballotvotetablemodel.h \
+  qt/ballotvotewindow.h \
   qt/bantablemodel.h \
   qt/bitcoinaddressvalidator.h \
   qt/bitcoinamountfield.h \
@@ -195,13 +268,38 @@ BITCOIN_QT_H = \
   qt/clientmodel.h \
   qt/coincontroldialog.h \
   qt/coincontroltreewidget.h \
+  qt/combocreationwidget.h \
   qt/csvmodelwriter.h \
+  qt/decisioncreationwidget.h \
+  qt/decisionmarketcreationwidget.h \
+  qt/decisionbranchfilterproxymodel.h \
+  qt/decisionbranchtablemodel.h \
+  qt/decisionbranchwindow.h \
+  qt/decisiondecisionfilterproxymodel.h \
+  qt/decisiondecisiontablemodel.h \
+  qt/decisiondecisionwindow.h \
+  qt/decisionmarketfilterproxymodel.h \
+  qt/decisionmarkettablemodel.h \
+  qt/decisionmarketwindow.h \
+  qt/decisionselectionview.h \
+  qt/decisionselectionmodel.h \
+  qt/decisiontradefilterproxymodel.h \
+  qt/decisiontradetablemodel.h \
+  qt/decisiontradewindow.h \
+  qt/decisionview.h \
+  qt/decisionviewgraph.h \
   qt/editaddressdialog.h \
   qt/guiconstants.h \
   qt/guiutil.h \
+  qt/hivemindrecenttablemodel.h \
   qt/intro.h \
   qt/macdockiconhandler.h \
   qt/macnotificationhandler.h \
+  qt/marketview.h \
+  qt/marketmodel.h \
+  qt/markettradeview.h \
+  qt/marketgraphwidget.h \
+  qt/marketviewgraph.h \
   qt/modaloverlay.h \
   qt/networkstyle.h \
   qt/notificator.h \
@@ -213,11 +311,17 @@ BITCOIN_QT_H = \
   qt/paymentserver.h \
   qt/peertablemodel.h \
   qt/platformstyle.h \
+  qt/qcustomplot.h \
   qt/qvalidatedlineedit.h \
   qt/qvaluecombobox.h \
   qt/receivecoinsdialog.h \
   qt/receiverequestdialog.h \
   qt/recentrequeststablemodel.h \
+  qt/resolvevotedialog.h \
+  qt/resolvevotegraph.h \
+  qt/resolvevotecoltablemodel.h \
+  qt/resolvevoterowtablemodel.h \
+  qt/resolvevoteinputtablemodel.h \
   qt/rpcconsole.h \
   qt/sendcoinsdialog.h \
   qt/sendcoinsentry.h \
@@ -231,6 +335,7 @@ BITCOIN_QT_H = \
   qt/transactiontablemodel.h \
   qt/transactionview.h \
   qt/utilitydialog.h \
+  qt/voteview.h \
   qt/walletframe.h \
   qt/walletmodel.h \
   qt/walletmodeltransaction.h \
@@ -242,10 +347,9 @@ RES_ICONS = \
   qt/res/icons/address-book.png \
   qt/res/icons/about.png \
   qt/res/icons/about_qt.png \
-  qt/res/icons/bitcoin.ico \
-  qt/res/icons/bitcoin_testnet.ico \
-  qt/res/icons/bitcoin.png \
-  qt/res/icons/chevron.png \
+  qt/res/icons/author.png \
+  qt/res/icons/hivemind.ico \
+  qt/res/icons/hivemind.png \
   qt/res/icons/clock1.png \
   qt/res/icons/clock2.png \
   qt/res/icons/clock3.png \
@@ -261,37 +365,36 @@ RES_ICONS = \
   qt/res/icons/edit.png \
   qt/res/icons/editcopy.png \
   qt/res/icons/editpaste.png \
+  qt/res/icons/expand.png \
   qt/res/icons/export.png \
   qt/res/icons/eye.png \
   qt/res/icons/eye_minus.png \
   qt/res/icons/eye_plus.png \
   qt/res/icons/filesave.png \
-  qt/res/icons/fontbigger.png \
-  qt/res/icons/fontsmaller.png \
-  qt/res/icons/hd_disabled.png \
-  qt/res/icons/hd_enabled.png \
   qt/res/icons/history.png \
   qt/res/icons/info.png \
   qt/res/icons/key.png \
   qt/res/icons/lock_closed.png \
   qt/res/icons/lock_open.png \
-  qt/res/icons/network_disabled.png \
+  qt/res/icons/ballot.png \
+  qt/res/icons/decision.png \
+  qt/res/icons/market.png \
   qt/res/icons/open.png \
   qt/res/icons/overview.png \
   qt/res/icons/quit.png \
   qt/res/icons/receive.png \
   qt/res/icons/remove.png \
+  qt/res/icons/resolve.png \
   qt/res/icons/send.png \
   qt/res/icons/synced.png \
+  qt/res/icons/trade.png \
   qt/res/icons/transaction0.png \
   qt/res/icons/transaction2.png \
-  qt/res/icons/transaction_abandoned.png \
   qt/res/icons/transaction_conflicted.png \
   qt/res/icons/tx_inout.png \
   qt/res/icons/tx_input.png \
   qt/res/icons/tx_output.png \
   qt/res/icons/tx_mined.png \
-  qt/res/icons/warning.png \
   qt/res/icons/verify.png
 
 BITCOIN_QT_BASE_CPP = \
@@ -311,6 +414,7 @@ BITCOIN_QT_BASE_CPP = \
   qt/optionsmodel.cpp \
   qt/peertablemodel.cpp \
   qt/platformstyle.cpp \
+  qt/qcustomplot.cpp \
   qt/qvalidatedlineedit.cpp \
   qt/qvaluecombobox.cpp \
   qt/rpcconsole.cpp \
@@ -323,10 +427,51 @@ BITCOIN_QT_WINDOWS_CPP = qt/winshutdownmonitor.cpp
 BITCOIN_QT_WALLET_CPP = \
   qt/addressbookpage.cpp \
   qt/addresstablemodel.cpp \
+  qt/authorview.cpp \
+  qt/authorpendingtablemodel.cpp \
   qt/askpassphrasedialog.cpp \
+  qt/ballotview.cpp \
+  qt/ballotballotfilterproxymodel.cpp \
+  qt/ballotballottablemodel.cpp \
+  qt/ballotballotwindow.cpp \
+  qt/ballotbranchwindow.cpp \
+  qt/ballotoutcomefilterproxymodel.cpp \
+  qt/ballotoutcometablemodel.cpp \
+  qt/ballotoutcomewindow.cpp \
+  qt/ballotsealedvotefilterproxymodel.cpp \
+  qt/ballotsealedvotetablemodel.cpp \
+  qt/ballotsealedvotewindow.cpp \
+  qt/ballotvotefilterproxymodel.cpp \
+  qt/ballotvotetablemodel.cpp \
+  qt/ballotvotewindow.cpp \
   qt/coincontroldialog.cpp \
   qt/coincontroltreewidget.cpp \
+  qt/combocreationwidget.cpp \
+  qt/decisioncreationwidget.cpp \
+  qt/decisionmarketcreationwidget.cpp \
+  qt/decisionbranchfilterproxymodel.cpp \
+  qt/decisionbranchtablemodel.cpp \
+  qt/decisionbranchwindow.cpp \
+  qt/decisiondecisionfilterproxymodel.cpp \
+  qt/decisiondecisiontablemodel.cpp \
+  qt/decisiondecisionwindow.cpp \
+  qt/decisionmarketfilterproxymodel.cpp \
+  qt/decisionmarkettablemodel.cpp \
+  qt/decisionmarketwindow.cpp \
+  qt/decisionselectionview.cpp \
+  qt/decisionselectionmodel.cpp \
+  qt/decisiontradefilterproxymodel.cpp \
+  qt/decisiontradetablemodel.cpp \
+  qt/decisiontradewindow.cpp \
+  qt/decisionview.cpp \
+  qt/decisionviewgraph.cpp \
   qt/editaddressdialog.cpp \
+  qt/hivemindrecenttablemodel.cpp \
+  qt/marketgraphwidget.cpp \
+  qt/marketview.cpp \
+  qt/marketmodel.cpp \
+  qt/markettradeview.cpp \
+  qt/marketviewgraph.cpp \
   qt/openuridialog.cpp \
   qt/overviewpage.cpp \
   qt/paymentrequestplus.cpp \
@@ -334,6 +479,11 @@ BITCOIN_QT_WALLET_CPP = \
   qt/receivecoinsdialog.cpp \
   qt/receiverequestdialog.cpp \
   qt/recentrequeststablemodel.cpp \
+  qt/resolvevotedialog.cpp \
+  qt/resolvevotegraph.cpp \
+  qt/resolvevotecoltablemodel.cpp \
+  qt/resolvevoterowtablemodel.cpp \
+  qt/resolvevoteinputtablemodel.cpp \
   qt/sendcoinsdialog.cpp \
   qt/sendcoinsentry.cpp \
   qt/signverifymessagedialog.cpp \
@@ -343,6 +493,7 @@ BITCOIN_QT_WALLET_CPP = \
   qt/transactionrecord.cpp \
   qt/transactiontablemodel.cpp \
   qt/transactionview.cpp \
+  qt/voteview.cpp \
   qt/walletframe.cpp \
   qt/walletmodel.cpp \
   qt/walletmodeltransaction.cpp \
@@ -356,7 +507,7 @@ if ENABLE_WALLET
 BITCOIN_QT_CPP += $(BITCOIN_QT_WALLET_CPP)
 endif
 
-RES_IMAGES = 
+RES_IMAGES =
 
 RES_MOVIES = $(wildcard $(srcdir)/qt/res/movies/spinner-*.png)
 
@@ -393,7 +544,7 @@ qt_bitcoin_qt_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(BITCOIN_QT_INCLUDE
   $(QT_INCLUDES) $(PROTOBUF_CFLAGS) $(QR_CFLAGS)
 qt_bitcoin_qt_CXXFLAGS = $(AM_CXXFLAGS) $(QT_PIE_FLAGS)
 
-qt_bitcoin_qt_SOURCES = qt/bitcoin.cpp
+qt_bitcoin_qt_SOURCES = qt/hivemind.cpp
 if TARGET_DARWIN
   qt_bitcoin_qt_SOURCES += $(BITCOIN_MM)
 endif
@@ -408,7 +559,7 @@ if ENABLE_ZMQ
 qt_bitcoin_qt_LDADD += $(LIBBITCOIN_ZMQ) $(ZMQ_LIBS)
 endif
 qt_bitcoin_qt_LDADD += $(LIBBITCOIN_CLI) $(LIBBITCOIN_COMMON) $(LIBBITCOIN_UTIL) $(LIBBITCOIN_CONSENSUS) $(LIBBITCOIN_CRYPTO) $(LIBUNIVALUE) $(LIBLEVELDB) $(LIBLEVELDB_SSE42) $(LIBMEMENV) \
-  $(BOOST_LIBS) $(QT_LIBS) $(QT_DBUS_LIBS) $(QR_LIBS) $(PROTOBUF_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(LIBSECP256K1) \
+  $(BOOST_LIBS) $(QT_LIBS) $(QT_DBUS_LIBS) $(QR_LIBS) $(PROTOBUF_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(LIBSECP256K1) $(LIBFDLIBM) $(LIBHIVEMIND_LINALG) \
   $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS)
 qt_bitcoin_qt_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(QT_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 qt_bitcoin_qt_LIBTOOLFLAGS = --tag CXX
@@ -422,7 +573,7 @@ $(srcdir)/qt/bitcoinstrings.cpp: $(libbitcoin_server_a_SOURCES) $(libbitcoin_wal
 	@test -n $(XGETTEXT) || echo "xgettext is required for updating translations"
 	$(AM_V_GEN) cd $(srcdir); XGETTEXT=$(XGETTEXT) PACKAGE_NAME="$(PACKAGE_NAME)" COPYRIGHT_HOLDERS="$(COPYRIGHT_HOLDERS)" COPYRIGHT_HOLDERS_SUBSTITUTION="$(COPYRIGHT_HOLDERS_SUBSTITUTION)" $(PYTHON) ../share/qt/extract_strings_qt.py $^
 
-translate: $(srcdir)/qt/bitcoinstrings.cpp $(QT_FORMS_UI) $(QT_FORMS_UI) $(BITCOIN_QT_BASE_CPP) qt/bitcoin.cpp $(BITCOIN_QT_WINDOWS_CPP) $(BITCOIN_QT_WALLET_CPP) $(BITCOIN_QT_H) $(BITCOIN_MM)
+translate: $(srcdir)/qt/bitcoinstrings.cpp $(QT_FORMS_UI) $(QT_FORMS_UI) $(BITCOIN_QT_BASE_CPP) qt/hivemind.cpp $(BITCOIN_QT_WINDOWS_CPP) $(BITCOIN_QT_WALLET_CPP) $(BITCOIN_QT_H) $(BITCOIN_MM)
 	@test -n $(LUPDATE) || echo "lupdate is required for updating translations"
 	$(AM_V_GEN) QT_SELECT=$(QT_SELECT) $(LUPDATE) $^ -locations relative -no-obsolete -ts $(srcdir)/qt/locale/bitcoin_en.ts
 

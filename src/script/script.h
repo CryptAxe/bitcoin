@@ -181,6 +181,8 @@ enum opcodetype
     OP_NOP9 = 0xb8,
     OP_NOP10 = 0xb9,
 
+    // Market
+    OP_MARKET = 0xc0,
 
     // template matching params
     OP_SMALLINTEGER = 0xfa,
@@ -641,6 +643,8 @@ public:
     unsigned int GetSigOpCount(const CScript& scriptSig) const;
 
     bool IsPayToScriptHash() const;
+    bool IsMarketScript(std::vector<unsigned char> &) const;
+    bool IsMarketScript(void) const;
     bool IsPayToWitnessScriptHash() const;
     bool IsWitnessProgram(int& version, std::vector<unsigned char>& program) const;
 

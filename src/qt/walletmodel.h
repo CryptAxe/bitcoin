@@ -23,9 +23,21 @@
 enum class OutputType;
 
 class AddressTableModel;
+class BallotBallotTableModel;
+class BallotOutcomeTableModel;
+class BallotSealedVoteTableModel;
+class BallotVoteTableModel;
+class DecisionBranchTableModel;
+class DecisionDecisionTableModel;
+class DecisionMarketTableModel;
+class DecisionTradeTableModel;
+class MarketModel;
 class OptionsModel;
 class PlatformStyle;
 class RecentRequestsTableModel;
+class ResolveVoteColTableModel;
+class ResolveVoteRowTableModel;
+class ResolveVoteInputTableModel;
 class TransactionTableModel;
 class WalletModelTransaction;
 
@@ -133,6 +145,19 @@ public:
 
     OptionsModel *getOptionsModel();
     AddressTableModel *getAddressTableModel();
+    DecisionBranchTableModel *getBallotBranchTableModel();
+    BallotBallotTableModel *getBallotBallotTableModel();
+    BallotOutcomeTableModel *getBallotOutcomeTableModel();
+    BallotSealedVoteTableModel *getBallotSealedVoteTableModel();
+    BallotVoteTableModel *getBallotVoteTableModel();
+    DecisionBranchTableModel *getDecisionBranchTableModel();
+    DecisionDecisionTableModel *getDecisionDecisionTableModel();
+    DecisionMarketTableModel *getDecisionMarketTableModel();
+    DecisionTradeTableModel *getDecisionTradeTableModel();
+    MarketModel *getMarketModel();
+    ResolveVoteColTableModel *getResolveVoteColTableModel();
+    ResolveVoteRowTableModel *getResolveVoteRowTableModel();
+    ResolveVoteInputTableModel *getResolveVoteInputTableModel();
     TransactionTableModel *getTransactionTableModel();
     RecentRequestsTableModel *getRecentRequestsTableModel();
 
@@ -240,6 +265,19 @@ private:
     OptionsModel *optionsModel;
 
     AddressTableModel *addressTableModel;
+    DecisionBranchTableModel *ballotBranchTableModel;
+    BallotBallotTableModel *ballotBallotTableModel;
+    BallotOutcomeTableModel *ballotOutcomeTableModel;
+    BallotSealedVoteTableModel *ballotSealedVoteTableModel;
+    BallotVoteTableModel *ballotVoteTableModel;
+    DecisionBranchTableModel *decisionBranchTableModel;
+    DecisionDecisionTableModel *decisionDecisionTableModel;
+    DecisionMarketTableModel *decisionMarketTableModel;
+    DecisionTradeTableModel *decisionTradeTableModel;
+    MarketModel *marketModel;
+    ResolveVoteColTableModel *resolveVoteColTableModel;
+    ResolveVoteRowTableModel *resolveVoteRowTableModel;
+    ResolveVoteInputTableModel *resolveVoteInputTableModel;
     TransactionTableModel *transactionTableModel;
     RecentRequestsTableModel *recentRequestsTableModel;
 

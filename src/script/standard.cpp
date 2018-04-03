@@ -27,6 +27,7 @@ const char* GetTxnOutputType(txnouttype t)
     case TX_PUBKEYHASH: return "pubkeyhash";
     case TX_SCRIPTHASH: return "scripthash";
     case TX_MULTISIG: return "multisig";
+    case TX_MARKET: return "market";
     case TX_NULL_DATA: return "nulldata";
     case TX_WITNESS_V0_KEYHASH: return "witness_v0_keyhash";
     case TX_WITNESS_V0_SCRIPTHASH: return "witness_v0_scripthash";
@@ -59,6 +60,14 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<std::v
     {
         typeRet = TX_SCRIPTHASH;
         std::vector<unsigned char> hashBytes(scriptPubKey.begin()+2, scriptPubKey.begin()+22);
+        vSolutionsRet.push_back(hashBytes);
+        return true;
+    }
+
+    // Shortcut for market transactions which must always be in a particular format
+    std::vector<unsigned char> hashBytes;
+    if (scriptPubKey.IsMarketScript(hashBytes)) {
+        typeRet = TX_MARKET;
         vSolutionsRet.push_back(hashBytes);
         return true;
     }

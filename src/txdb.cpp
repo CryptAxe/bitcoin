@@ -424,3 +424,658 @@ bool CCoinsViewDB::Upgrade() {
     LogPrintf("[%s].\n", ShutdownRequested() ? "CANCELLED" : "DONE");
     return !ShutdownRequested();
 }
+
+CMarketTreeDB::CMarketTreeDB(size_t nCacheSize, bool fMemory, bool fWipe)
+  : CDBWrapper(GetDataDir() / "blocks" / "market", nCacheSize, fMemory, fWipe) {
+}
+
+bool CMarketTreeDB::ReadBlockFileInfo(int nFile, CBlockFileInfo &info) {
+    return Read(make_pair('f', nFile), info);
+}
+
+bool CMarketTreeDB::WriteReindexing(bool fReindexing) {
+    if (fReindexing)
+        return Write('R', '1');
+    else
+        return Erase('R');
+}
+
+bool CMarketTreeDB::ReadReindexing(bool &fReindexing) {
+    fReindexing = Exists('R');
+    return true;
+}
+
+bool CMarketTreeDB::ReadLastBlockFile(int &nFile) {
+    return Read('l', nFile);
+}
+
+bool CMarketTreeDB::WriteBatchSync(const std::vector<std::pair<int, const CBlockFileInfo*> >& fileInfo, int nLastFile, const std::vector<const CBlockIndex*>& blockinfo) {
+    CDBBatch batch(*this);
+    for (std::vector<std::pair<int, const CBlockFileInfo*> >::const_iterator it=fileInfo.begin(); it != fileInfo.end(); it++) {
+        batch.Write(make_pair('f', it->first), *it->second);
+    }
+    batch.Write('l', nLastFile);
+    return WriteBatch(batch, true);
+}
+
+bool CMarketTreeDB::WriteMarketIndex(const std::vector<std::pair<uint256, const marketObj *> >&vect)
+{
+    CDBBatch batch(*this);
+
+    std::vector<std::pair<uint256,const marketObj *> >::const_iterator it;
+    for (it=vect.begin(); it != vect.end(); it++) {
+        const uint256 &objid = it->first;
+        const marketObj *obj = it->second;
+        pair<char,uint256> key = make_pair(obj->marketop, objid);
+
+        if (obj->marketop == 'B') {
+           const marketBranch *ptr = (const marketBranch *) obj;
+           pair<marketBranch,uint256> value = make_pair(*ptr, obj->txid);
+           batch.Write(key, value);
+        }
+        else
+        if (obj->marketop == 'D') {
+           const marketDecision *ptr = (const marketDecision *) obj;
+           pair<marketDecision,uint256> value = make_pair(*ptr, obj->txid);
+           batch.Write(key, value);
+           batch.Write(make_pair(make_pair('d',ptr->branchid),objid), value);
+        }
+        else
+        if (obj->marketop == 'L') {
+           const marketStealVote *ptr = (const marketStealVote *) obj;
+           pair<marketStealVote,uint256> value = make_pair(*ptr, obj->txid);
+           batch.Write(key, value);
+           batch.Write(make_pair(make_pair(make_pair('l',ptr->branchid),ptr->height),objid), value);
+        }
+        else
+        if (obj->marketop == 'M') {
+           const marketMarket *ptr = (const marketMarket *) obj;
+           pair<marketMarket,uint256> value = make_pair(*ptr, obj->txid);
+           batch.Write(key, value);
+           for(size_t i=0; i < ptr->decisionIDs.size(); i++)
+               batch.Write(make_pair(make_pair('m',ptr->decisionIDs[i]),objid), value);
+        }
+        else
+        if (obj->marketop == 'O') {
+           const marketOutcome *ptr = (const marketOutcome *) obj;
+           pair<marketOutcome,uint256> value = make_pair(*ptr, obj->txid);
+           batch.Write(key, value);
+           batch.Write(make_pair(make_pair('o',ptr->branchid),objid), value);
+        }
+        else
+        if (obj->marketop == 'R') {
+           const marketRevealVote *ptr = (const marketRevealVote *) obj;
+           pair<marketRevealVote,uint256> value = make_pair(*ptr, obj->txid);
+           batch.Write(key, value);
+           batch.Write(make_pair(make_pair(make_pair('r',ptr->branchid),ptr->height),objid), value);
+        }
+        else
+        if (obj->marketop == 'S') {
+           const marketSealedVote *ptr = (const marketSealedVote *) obj;
+           pair<marketSealedVote,uint256> value = make_pair(*ptr, obj->txid);
+           batch.Write(key, value);
+           batch.Write(make_pair(make_pair(make_pair('s',ptr->branchid),ptr->height),objid), value);
+        }
+        else
+        if (obj->marketop == 'T') {
+           const marketTrade *ptr = (const marketTrade *) obj;
+           pair<marketTrade,uint256> value = make_pair(*ptr, obj->txid);
+           batch.Write(key, value);
+           batch.Write(make_pair(make_pair('t',ptr->marketid),objid), value);
+        }
+    }
+    return WriteBatch(batch);
+}
+
+bool CMarketTreeDB::WriteFlag(const std::string &name, bool fValue) {
+    return Write(std::make_pair('F', name), fValue ? '1' : '0');
+}
+
+bool CMarketTreeDB::ReadFlag(const std::string &name, bool &fValue) {
+    char ch;
+    if (!Read(std::make_pair('F', name), ch))
+       return false;
+    fValue = ch == '1';
+    return true;
+}
+
+marketBranch *
+CMarketTreeDB::GetBranch(const uint256 &objid)
+{
+//    pair<char,uint256> idx = make_pair('B', objid);
+//    ostringstream ss;
+//    ::Serialize(ss, idx, SER_DISK, CLIENT_VERSION);
+////    boost::scoped_ptr<leveldb::Iterator> pcursor(NewIterator());
+//    std::unique_ptr<CDBIterator> pcursor(NewIterator());
+//    pcursor->Seek(ss.str());
+//    if (pcursor->Valid()) {
+//        try {
+//            leveldb::Slice slKey = pcursor->key();
+//            CDataStream ssKey(slKey.data(), slKey.data()+slKey.size(), SER_DISK, CLIENT_VERSION);
+
+//            pair<char,uint256> key;
+//            ssKey >> key;
+
+//            if (key == idx) {
+//                leveldb::Slice slValue = pcursor->value();
+//                CDataStream ssValue(slValue.data(), slValue.data()+slValue.size(), SER_DISK, CLIENT_VERSION);
+
+//                marketBranch *obj = new marketBranch;
+//                ssValue >> *obj;
+//                ssValue >> obj->txid;
+//                return obj;
+//            }
+//        } catch (const std::exception& e) {
+//            error("%s: %s", __func__, e.what());
+//        }
+//    }
+    return NULL;
+}
+
+marketDecision *
+CMarketTreeDB::GetDecision(const uint256 &objid)
+{
+//    pair<char,uint256> idx = make_pair('D', objid);
+//    ostringstream ss;
+//    ::Serialize(ss, idx, SER_DISK, CLIENT_VERSION);
+//    boost::scoped_ptr<leveldb::Iterator> pcursor(NewIterator());
+//    pcursor->Seek(ss.str());
+//    if (pcursor->Valid()) {
+//        try {
+//            leveldb::Slice slKey = pcursor->key();
+//            CDataStream ssKey(slKey.data(), slKey.data()+slKey.size(), SER_DISK, CLIENT_VERSION);
+
+//            pair<char,uint256> key;
+//            ssKey >> key;
+
+//            if (key == idx) {
+//                leveldb::Slice slValue = pcursor->value();
+//                CDataStream ssValue(slValue.data(), slValue.data()+slValue.size(), SER_DISK, CLIENT_VERSION);
+
+//                marketDecision *obj = new marketDecision;
+//                ssValue >> *obj;
+//                ssValue >> obj->txid;
+//                return obj;
+//            }
+//        } catch (const std::exception& e) {
+//           error("%s: %s", __func__, e.what());
+//        }
+//    }
+    return NULL;
+}
+
+marketMarket *
+CMarketTreeDB::GetMarket(const uint256 &objid)
+{
+//    pair<char,uint256> idx = make_pair('M', objid);
+//    ostringstream ss;
+//    ::Serialize(ss, idx, SER_DISK, CLIENT_VERSION);
+//    boost::scoped_ptr<leveldb::Iterator> pcursor(NewIterator());
+//    pcursor->Seek(ss.str());
+//    if (pcursor->Valid()) {
+//        try {
+//            leveldb::Slice slKey = pcursor->key();
+//            CDataStream ssKey(slKey.data(), slKey.data()+slKey.size(), SER_DISK, CLIENT_VERSION);
+
+//            pair<char,uint256> key;
+//            ssKey >> key;
+
+//            if (key == idx) {
+//                leveldb::Slice slValue = pcursor->value();
+//                CDataStream ssValue(slValue.data(), slValue.data()+slValue.size(), SER_DISK, CLIENT_VERSION);
+
+//                marketMarket *obj = new marketMarket;
+//                ssValue >> *obj;
+//                ssValue >> obj->txid;
+//                return obj;
+//            }
+//        } catch (const std::exception& e) {
+//            error("%s: %s", __func__, e.what());
+//        }
+//    }
+    return NULL;
+}
+
+marketOutcome *
+CMarketTreeDB::GetOutcome(const uint256 &objid)
+{
+//    pair<char,uint256> idx = make_pair('O', objid);
+//    ostringstream ss;
+//    ::Serialize(ss, idx, SER_DISK, CLIENT_VERSION);
+//    boost::scoped_ptr<leveldb::Iterator> pcursor(NewIterator());
+//    pcursor->Seek(ss.str());
+//    if (pcursor->Valid()) {
+//        try {
+//            leveldb::Slice slKey = pcursor->key();
+//            CDataStream ssKey(slKey.data(), slKey.data()+slKey.size(), SER_DISK, CLIENT_VERSION);
+
+//            pair<char,uint256> key;
+//            ssKey >> key;
+
+//            if (key == idx) {
+//                leveldb::Slice slValue = pcursor->value();
+//                CDataStream ssValue(slValue.data(), slValue.data()+slValue.size(), SER_DISK, CLIENT_VERSION);
+
+//                marketOutcome *obj = new marketOutcome;
+//                ssValue >> *obj;
+//                ssValue >> obj->txid;
+//                return obj;
+//            }
+//        } catch (const std::exception& e) {
+//            error("%s: %s", __func__, e.what());
+//        }
+//    }
+    return NULL;
+}
+
+marketRevealVote *
+CMarketTreeDB::GetRevealVote(const uint256 &objid)
+{
+//    pair<char,uint256> idx = make_pair('R', objid);
+//    ostringstream ss;
+//    ::Serialize(ss, idx, SER_DISK, CLIENT_VERSION);
+//    boost::scoped_ptr<leveldb::Iterator> pcursor(NewIterator());
+//    pcursor->Seek(ss.str());
+//    if (pcursor->Valid()) {
+//        try {
+//            leveldb::Slice slKey = pcursor->key();
+//            CDataStream ssKey(slKey.data(), slKey.data()+slKey.size(), SER_DISK, CLIENT_VERSION);
+
+//            pair<char,uint256> key;
+//            ssKey >> key;
+
+//            if (key == idx) {
+//                leveldb::Slice slValue = pcursor->value();
+//                CDataStream ssValue(slValue.data(), slValue.data()+slValue.size(), SER_DISK, CLIENT_VERSION);
+
+//                marketRevealVote *obj = new marketRevealVote;
+//                ssValue >> *obj;
+//                ssValue >> obj->txid;
+//                return obj;
+//            }
+//        } catch (const std::exception& e) {
+//            error("%s: %s", __func__, e.what());
+//        }
+//    }
+    return NULL;
+}
+
+marketSealedVote *
+CMarketTreeDB::GetSealedVote(const uint256 &objid)
+{
+//    pair<char,uint256> idx = make_pair('S', objid);
+//    ostringstream ss;
+//    ::Serialize(ss, idx, SER_DISK, CLIENT_VERSION);
+//    boost::scoped_ptr<leveldb::Iterator> pcursor(NewIterator());
+//    pcursor->Seek(ss.str());
+//    if (pcursor->Valid()) {
+//        try {
+//            leveldb::Slice slKey = pcursor->key();
+//            CDataStream ssKey(slKey.data(), slKey.data()+slKey.size(), SER_DISK, CLIENT_VERSION);
+
+//            pair<char,uint256> key;
+//            ssKey >> key;
+
+//            if (key == idx) {
+//                leveldb::Slice slValue = pcursor->value();
+//                CDataStream ssValue(slValue.data(), slValue.data()+slValue.size(), SER_DISK, CLIENT_VERSION);
+
+//                marketSealedVote *obj = new marketSealedVote;
+//                ssValue >> *obj;
+//                ssValue >> obj->txid;
+//                return obj;
+//            }
+//        } catch (const std::exception& e) {
+//            error("%s: %s", __func__, e.what());
+//        }
+//    }
+    return NULL;
+}
+
+marketStealVote *
+CMarketTreeDB::GetStealVote(const uint256 &objid)
+{
+//    pair<char,uint256> idx = make_pair('L', objid);
+//    ostringstream ss;
+//    ::Serialize(ss, idx, SER_DISK, CLIENT_VERSION);
+//    boost::scoped_ptr<leveldb::Iterator> pcursor(NewIterator());
+//    pcursor->Seek(ss.str());
+//    if (pcursor->Valid()) {
+//        try {
+//            leveldb::Slice slKey = pcursor->key();
+//            CDataStream ssKey(slKey.data(), slKey.data()+slKey.size(), SER_DISK, CLIENT_VERSION);
+
+//            pair<char,uint256> key;
+//            ssKey >> key;
+
+//            if (key == idx) {
+//                leveldb::Slice slValue = pcursor->value();
+//                CDataStream ssValue(slValue.data(), slValue.data()+slValue.size(), SER_DISK, CLIENT_VERSION);
+
+//                marketStealVote *obj = new marketStealVote;
+//                ssValue >> *obj;
+//                ssValue >> obj->txid;
+//                return obj;
+//            }
+//        } catch (const std::exception& e) {
+//            error("%s: %s", __func__, e.what());
+//        }
+//    }
+    return NULL;
+}
+
+marketTrade *
+CMarketTreeDB::GetTrade(const uint256 &objid)
+{
+//    pair<char,uint256> idx = make_pair('T', objid);
+//    ostringstream ss;
+//    ::Serialize(ss, idx, SER_DISK, CLIENT_VERSION);
+//    boost::scoped_ptr<leveldb::Iterator> pcursor(NewIterator());
+//    pcursor->Seek(ss.str());
+//    if (pcursor->Valid()) {
+//        try {
+//            leveldb::Slice slKey = pcursor->key();
+//            CDataStream ssKey(slKey.data(), slKey.data()+slKey.size(), SER_DISK, CLIENT_VERSION);
+
+//            pair<char,uint256> key;
+//            ssKey >> key;
+
+//            if (key == idx) {
+//                leveldb::Slice slValue = pcursor->value();
+//                CDataStream ssValue(slValue.data(), slValue.data()+slValue.size(), SER_DISK, CLIENT_VERSION);
+
+//                marketTrade *obj = new marketTrade;
+//                ssValue >> *obj;
+//                ssValue >> obj->txid;
+//                return obj;
+//            }
+//        } catch (const std::exception& e) {
+//            error("%s: %s", __func__, e.what());
+//        }
+//    }
+    return NULL;
+}
+
+vector<marketBranch *>
+CMarketTreeDB::GetBranches(void)
+{
+//    const char marketop = 'B';
+//    ostringstream ss;
+//    ss << marketop;
+
+    vector<marketBranch *> vec;
+//    boost::scoped_ptr<leveldb::Iterator> pcursor(NewIterator());
+//    for(pcursor->Seek(ss.str()); pcursor->Valid(); pcursor->Next()) {
+//        boost::this_thread::interruption_point();
+//        try {
+//            leveldb::Slice slKey = pcursor->key();
+//            CDataStream ssKey(slKey.data(), slKey.data()+slKey.size(), SER_DISK, CLIENT_VERSION);
+//            char key;
+//            ssKey >> key;
+//            if (key != marketop)
+//                break;
+
+//            leveldb::Slice slValue = pcursor->value();
+//            CDataStream ssValue(slValue.data(), slValue.data()+slValue.size(), SER_DISK, CLIENT_VERSION);
+
+//            marketBranch *obj = new marketBranch;
+//            ssValue >> *obj;
+//            ssValue >> obj->txid;
+//            vec.push_back(obj);
+//        } catch (const std::exception& e) {
+//            error("%s: %s", __func__, e.what());
+//            break;
+//        }
+//    }
+    return vec;
+}
+
+vector<marketDecision *>
+CMarketTreeDB::GetDecisions(const uint256 & /* branchid */ id)
+{
+//    const char marketop = 'd';
+//    ostringstream ss;
+//    ::Serialize(ss, make_pair(make_pair(marketop, id), uint256()), SER_DISK, CLIENT_VERSION);
+
+    vector<marketDecision *> vec;
+//    boost::scoped_ptr<leveldb::Iterator> pcursor(NewIterator());
+//    for(pcursor->Seek(ss.str()); pcursor->Valid(); pcursor->Next()) {
+//        boost::this_thread::interruption_point();
+//        try {
+//            leveldb::Slice slKey = pcursor->key();
+//            CDataStream ssKey(slKey.data(), slKey.data()+slKey.size(), SER_DISK, CLIENT_VERSION);
+//            pair<char,uint256> key;
+//            ssKey >> key;
+//            if (key.first != marketop)
+//                break;
+//            if (key.second != id)
+//                break;
+
+//            leveldb::Slice slValue = pcursor->value();
+//            CDataStream ssValue(slValue.data(), slValue.data()+slValue.size(), SER_DISK, CLIENT_VERSION);
+
+//            marketDecision *obj = new marketDecision;
+//            ssValue >> *obj;
+//            ssValue >> obj->txid;
+//            vec.push_back(obj);
+//        } catch (const std::exception& e) {
+//            error("%s: %s", __func__, e.what());
+//            break;
+//        }
+//    }
+    return vec;
+}
+
+vector<marketMarket *>
+CMarketTreeDB::GetMarkets(const uint256 & /* decisionid */ id)
+{
+//    const char marketop = 'm';
+//    ostringstream ss;
+//    ::Serialize(ss, make_pair(make_pair(marketop, id), uint256()), SER_DISK, CLIENT_VERSION);
+
+    vector<marketMarket *> vec;
+//    boost::scoped_ptr<leveldb::Iterator> pcursor(NewIterator());
+//    for(pcursor->Seek(ss.str()); pcursor->Valid(); pcursor->Next()) {
+//        boost::this_thread::interruption_point();
+//        try {
+//            leveldb::Slice slKey = pcursor->key();
+//            CDataStream ssKey(slKey.data(), slKey.data()+slKey.size(), SER_DISK, CLIENT_VERSION);
+//            pair<char,uint256> key;
+//            ssKey >> key;
+//            if (key.first != marketop)
+//                break;
+//            if (key.second != id)
+//                break;
+
+//            leveldb::Slice slValue = pcursor->value();
+//            CDataStream ssValue(slValue.data(), slValue.data()+slValue.size(), SER_DISK, CLIENT_VERSION);
+
+//            marketMarket *obj = new marketMarket;
+//            ssValue >> *obj;
+//            ssValue >> obj->txid;
+//            vec.push_back(obj);
+//        } catch (const std::exception& e) {
+//            error("%s: %s", __func__, e.what());
+//            break;
+//        }
+//    }
+    return vec;
+}
+
+vector<marketOutcome *>
+CMarketTreeDB::GetOutcomes(const uint256 & /* branchid */ id)
+{
+//    const char marketop = 'o';
+//    ostringstream ss;
+//    ::Serialize(ss, make_pair(make_pair(marketop, id), uint256()), SER_DISK, CLIENT_VERSION);
+
+    vector<marketOutcome *> vec;
+//    boost::scoped_ptr<leveldb::Iterator> pcursor(NewIterator());
+//    for(pcursor->Seek(ss.str()); pcursor->Valid(); pcursor->Next()) {
+//        boost::this_thread::interruption_point();
+//        try {
+//            leveldb::Slice slKey = pcursor->key();
+//            CDataStream ssKey(slKey.data(), slKey.data()+slKey.size(), SER_DISK, CLIENT_VERSION);
+//            pair<char,uint256> key;
+//            ssKey >> key;
+//            if (key.first != marketop)
+//                break;
+//            if (key.second != id)
+//                break;
+
+//            leveldb::Slice slValue = pcursor->value();
+//            CDataStream ssValue(slValue.data(), slValue.data()+slValue.size(), SER_DISK, CLIENT_VERSION);
+
+//            marketOutcome *obj = new marketOutcome;
+//            ssValue >> *obj;
+//            ssValue >> obj->txid;
+//            vec.push_back(obj);
+//        } catch (const std::exception& e) {
+//            error("%s: %s", __func__, e.what());
+//            break;
+//        }
+//    }
+    return vec;
+}
+
+vector<marketRevealVote *>
+CMarketTreeDB::GetRevealVotes(const uint256 & /* branchid */ id, uint32_t height)
+{
+//    const char marketop = 'r';
+//    ostringstream ss;
+//    ::Serialize(ss, make_pair(make_pair(make_pair(marketop, id), height), uint256()), SER_DISK, CLIENT_VERSION);
+
+    vector<marketRevealVote *> vec;
+//    boost::scoped_ptr<leveldb::Iterator> pcursor(NewIterator());
+//    for(pcursor->Seek(ss.str()); pcursor->Valid(); pcursor->Next()) {
+//        boost::this_thread::interruption_point();
+//        try {
+//            leveldb::Slice slKey = pcursor->key();
+//            CDataStream ssKey(slKey.data(), slKey.data()+slKey.size(), SER_DISK, CLIENT_VERSION);
+//            pair<pair<char,uint256>,uint32_t> key;
+//            ssKey >> key;
+//            if (key.first.first != marketop)
+//                break;
+//            if (key.first.second != id)
+//                break;
+//            if (key.second != height)
+//                break;
+
+//            leveldb::Slice slValue = pcursor->value();
+//            CDataStream ssValue(slValue.data(), slValue.data()+slValue.size(), SER_DISK, CLIENT_VERSION);
+
+//            marketRevealVote *obj = new marketRevealVote;
+//            ssValue >> *obj;
+//            ssValue >> obj->txid;
+//            vec.push_back(obj);
+//        } catch (const std::exception& e) {
+//            error("%s: %s", __func__, e.what());
+//            break;
+//        }
+//    }
+    return vec;
+}
+
+vector<marketSealedVote *>
+CMarketTreeDB::GetSealedVotes(const uint256 & /* branchid */ id, uint32_t height)
+{
+//    const char marketop = 's';
+//    ostringstream ss;
+//    ::Serialize(ss, make_pair(make_pair(make_pair(marketop, id), height), uint256()), SER_DISK, CLIENT_VERSION);
+
+    vector<marketSealedVote *> vec;
+//    boost::scoped_ptr<leveldb::Iterator> pcursor(NewIterator());
+//    for(pcursor->Seek(ss.str()); pcursor->Valid(); pcursor->Next()) {
+//        boost::this_thread::interruption_point();
+//        try {
+//            leveldb::Slice slKey = pcursor->key();
+//            CDataStream ssKey(slKey.data(), slKey.data()+slKey.size(), SER_DISK, CLIENT_VERSION);
+//            pair<pair<char,uint256>,uint32_t> key;
+//            ssKey >> key;
+//            if (key.first.first != marketop)
+//                break;
+//            if (key.first.second != id)
+//                break;
+//            if (key.second != height)
+//                break;
+
+//            leveldb::Slice slValue = pcursor->value();
+//            CDataStream ssValue(slValue.data(), slValue.data()+slValue.size(), SER_DISK, CLIENT_VERSION);
+
+//            marketSealedVote *obj = new marketSealedVote;
+//            ssValue >> *obj;
+//            ssValue >> obj->txid;
+//            vec.push_back(obj);
+//        } catch (const std::exception& e) {
+//            error("%s: %s", __func__, e.what());
+//            break;
+//        }
+//    }
+    return vec;
+}
+
+vector<marketStealVote *>
+CMarketTreeDB::GetStealVotes(const uint256 & /* branchid */ id, uint32_t height)
+{
+//    const char marketop = 'l';
+//    ostringstream ss;
+//    ::Serialize(ss, make_pair(make_pair(make_pair(marketop, id), height), uint256()), SER_DISK, CLIENT_VERSION);
+
+    vector<marketStealVote *> vec;
+//    boost::scoped_ptr<leveldb::Iterator> pcursor(NewIterator());
+//    for(pcursor->Seek(ss.str()); pcursor->Valid(); pcursor->Next()) {
+//        boost::this_thread::interruption_point();
+//        try {
+//            leveldb::Slice slKey = pcursor->key();
+//            CDataStream ssKey(slKey.data(), slKey.data()+slKey.size(), SER_DISK, CLIENT_VERSION);
+//            pair<pair<char,uint256>,uint32_t> key;
+//            ssKey >> key;
+//            if (key.first.first != marketop)
+//                break;
+//            if (key.first.second != id)
+//                break;
+//            if (key.second != height)
+//                break;
+
+//            leveldb::Slice slValue = pcursor->value();
+//            CDataStream ssValue(slValue.data(), slValue.data()+slValue.size(), SER_DISK, CLIENT_VERSION);
+
+//            marketStealVote *obj = new marketStealVote;
+//            ssValue >> *obj;
+//            ssValue >> obj->txid;
+//            vec.push_back(obj);
+//        } catch (const std::exception& e) {
+//            error("%s: %s", __func__, e.what());
+//            break;
+//        }
+//    }
+    return vec;
+}
+
+vector<marketTrade *>
+CMarketTreeDB::GetTrades(const uint256 & /* marketid */ id)
+{
+    const char marketop = 't';
+    vector<marketTrade *> vec;
+
+    std::unique_ptr<CDBIterator> pcursor(NewIterator());
+    pcursor->Seek(std::make_pair(marketop, id));
+
+    while (pcursor->Valid()) {
+        boost::this_thread::interruption_point();
+        std::pair<char, uint256> key;
+        if (pcursor->GetKey(key) && key.first == marketop) {
+            marketTrade obj;
+            if (pcursor->GetValue(obj)) {
+
+            } else {
+                error("%s: failed to read value", __func__);
+                break;
+            }
+        } else {
+            break;
+        }
+    }
+
+    return vec;
+}

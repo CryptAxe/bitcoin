@@ -9,6 +9,7 @@
 #include <coins.h>
 #include <dbwrapper.h>
 #include <chain.h>
+#include <primitives/market.h>
 
 #include <map>
 #include <string>
@@ -124,6 +125,39 @@ public:
     bool WriteFlag(const std::string &name, bool fValue);
     bool ReadFlag(const std::string &name, bool &fValue);
     bool LoadBlockIndexGuts(const Consensus::Params& consensusParams, std::function<CBlockIndex*(const uint256&)> insertBlockIndex);
+};
+
+/** Access to the market database (blocks/market/) */
+class CMarketTreeDB : public CDBWrapper
+{
+public:
+    CMarketTreeDB(size_t nCacheSize, bool fMemory = false, bool fWipe = false);
+    bool WriteBatchSync(const std::vector<std::pair<int, const CBlockFileInfo*> >& fileInfo, int nLastFile, const std::vector<const CBlockIndex*>& blockinfo);
+    bool ReadBlockFileInfo(int nFile, CBlockFileInfo &fileinfo);
+    bool ReadLastBlockFile(int &nFile);
+    bool WriteReindexing(bool fReindex);
+    bool ReadReindexing(bool &fReindex);
+    bool WriteMarketIndex(const std::vector<std::pair<uint256, const marketObj *> > &list);
+    bool WriteFlag(const std::string &name, bool fValue);
+    bool ReadFlag(const std::string &name, bool &fValue);
+
+    marketBranch *GetBranch(const uint256 &);
+    marketDecision *GetDecision(const uint256 &);
+    marketMarket *GetMarket(const uint256 &);
+    marketOutcome *GetOutcome(const uint256 &);
+    marketRevealVote *GetRevealVote(const uint256 &);
+    marketSealedVote *GetSealedVote(const uint256 &);
+    marketStealVote *GetStealVote(const uint256 &);
+    marketTrade *GetTrade(const uint256 &);
+
+    std::vector<marketBranch *> GetBranches(void);
+    std::vector<marketDecision *> GetDecisions(const uint256 &);
+    std::vector<marketMarket *> GetMarkets(const uint256 &);
+    std::vector<marketOutcome *> GetOutcomes(const uint256 &);
+    std::vector<marketRevealVote *> GetRevealVotes(const uint256 &, uint32_t);
+    std::vector<marketSealedVote *> GetSealedVotes(const uint256 &, uint32_t);
+    std::vector<marketStealVote *> GetStealVotes(const uint256 &, uint32_t);
+    std::vector<marketTrade *> GetTrades(const uint256 &);
 };
 
 #endif // BITCOIN_TXDB_H
