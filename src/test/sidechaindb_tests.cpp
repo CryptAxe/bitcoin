@@ -8,6 +8,7 @@
 #include "miner.h"
 #include "random.h"
 #include "script/sigcache.h"
+#include "script/standard.h"
 #include "sidechain.h"
 #include "sidechaindb.h"
 #include "uint256.h"
@@ -332,6 +333,138 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_multipleWT)
 
     // Reset SCDB after testing
     scdb.Reset();
+}
+
+BOOST_AUTO_TEST_CASE(new_deposit_test_p)
+{
+    BOOST_CHECK(chainActive.Height() == 100);
+
+    // Generate a block
+    CreateAndProcessBlock({}, GetScriptForRawPubKey(coinbaseKey.GetPubKey()));
+
+    // Checking that we can make blocks normally
+    BOOST_CHECK(chainActive.Height() == 101);
+
+    // Use the test chain coinbase key as an example sidechain destination
+    CKeyID destinationKey = coinbaseKey.GetPubKey().GetID();
+
+    // Create sidechain deposit (P's style)
+    CMutableTransaction mtx;
+    mtx.nVersion = 2;
+    mtx.vin.resize(1);
+    mtx.vout.resize(1);
+    mtx.vin[0].prevout.hash = coinbaseTxns[0].GetHash();
+    mtx.vin[0].prevout.n = 0;
+
+    // Sidechain deposit script
+    CScript depositScript;
+    depositScript.resize(6);
+    depositScript[0] = OP_TRUE;
+    depositScript[1] = 0x04; // Push the next 4 bytes to the stack
+    depositScript[2] = 0x0e; // Flag bytes
+    depositScript[3] = 0x0d;
+    depositScript[4] = 0x0d;
+    depositScript[5] = 0x0e;
+    depositScript << ToByteVector(destinationKey);
+    depositScript << CScriptNum::serialize(255); // nSidechain
+    depositScript << OP_DROP << OP_2DROP; // leave only OP_TRUE on the stack
+
+    // Note that the 3 DROP operations are needed in the case that the deposit
+    // is to sidechain #0. We could make the KeyID the last thing pushed to the
+    // stack and remove the DROP commands. I think it looks better this way
+    // because OP_TRUE being the only thing we leave on the stack makes
+    // intentions clear.
+
+    mtx.vout[0].scriptPubKey = depositScript;
+    mtx.vout[0].nValue = 50 * CENT;
+
+    // Sign (the coinbase input)
+    const CTransaction txToSign(mtx);
+    std::vector<unsigned char> vchSig;
+    uint256 hash = SignatureHash(GetScriptForRawPubKey(coinbaseKey.GetPubKey()), txToSign, 0, SIGHASH_ALL, 0, SIGVERSION_BASE);
+    BOOST_CHECK(coinbaseKey.Sign(hash, vchSig));
+    vchSig.push_back((unsigned char)SIGHASH_ALL);
+    mtx.vin[0].scriptSig << vchSig;
+
+    CreateAndProcessBlock({mtx}, GetScriptForRawPubKey(coinbaseKey.GetPubKey()), false, false);
+
+    BOOST_CHECK(chainActive.Height() == 102);
+
+    // Now spend the sidechain deposit output we created
+    CMutableTransaction mtxSpend;
+    mtxSpend.nVersion = 2;
+    mtxSpend.vin.resize(1);
+    mtxSpend.vout.resize(1);
+    mtxSpend.vin[0].prevout.hash = mtx.GetHash();
+    mtxSpend.vin[0].prevout.n = 0;
+    mtxSpend.vout[0].scriptPubKey = CScript() << OP_0;
+    mtxSpend.vout[0].nValue = 25 * CENT;
+
+    CreateAndProcessBlock({mtxSpend}, GetScriptForRawPubKey(coinbaseKey.GetPubKey()), false, false);
+
+    BOOST_CHECK(chainActive.Height() == 103);
+}
+
+BOOST_AUTO_TEST_CASE(new_deposit_test_m)
+{
+    BOOST_CHECK(chainActive.Height() == 100);
+
+    // Generate a block
+    CreateAndProcessBlock({}, GetScriptForRawPubKey(coinbaseKey.GetPubKey()));
+
+    // Checking that we can make blocks normally
+    BOOST_CHECK(chainActive.Height() == 101);
+
+    // Use the test chain coinbase key as an example sidechain destination
+    CKeyID destinationKey = coinbaseKey.GetPubKey().GetID();
+    std::vector<unsigned char> vchKeyID = ToByteVector(destinationKey);
+
+    // Create sidechain deposit (M's style)
+    CMutableTransaction mtx;
+    mtx.nVersion = 2;
+    mtx.vin.resize(1);
+    mtx.vout.resize(1);
+    mtx.vin[0].prevout.hash = coinbaseTxns[0].GetHash();
+    mtx.vin[0].prevout.n = 0;
+
+    CScript depositScript;
+    depositScript.resize(6);
+    depositScript[0] = 0x19; // Push the next 25 bytes to the stack
+    depositScript[1] = 0x0e; // Flag bytes
+    depositScript[2] = 0x0d;
+    depositScript[3] = 0x0d;
+    depositScript[4] = 0x0e;
+    depositScript[5] = 0xff; // Sidechain number (255)
+    depositScript.insert(depositScript.end(), vchKeyID.begin(), vchKeyID.end());
+
+    mtx.vout[0].scriptPubKey = depositScript;
+    mtx.vout[0].nValue = 50 * CENT;
+
+    // Sign (the coinbase input)
+    const CTransaction txToSign(mtx);
+    std::vector<unsigned char> vchSig;
+    uint256 hash = SignatureHash(GetScriptForRawPubKey(coinbaseKey.GetPubKey()), txToSign, 0, SIGHASH_ALL, 0, SIGVERSION_BASE);
+    BOOST_CHECK(coinbaseKey.Sign(hash, vchSig));
+    vchSig.push_back((unsigned char)SIGHASH_ALL);
+    mtx.vin[0].scriptSig << vchSig;
+
+    CreateAndProcessBlock({mtx}, GetScriptForRawPubKey(coinbaseKey.GetPubKey()), false, false);
+
+    BOOST_CHECK(chainActive.Height() == 102);
+
+    // Now spend the sidechain deposit output we created
+    CMutableTransaction mtxSpend;
+    mtxSpend.nVersion = 2;
+    mtxSpend.vin.resize(1);
+    mtxSpend.vout.resize(1);
+    mtxSpend.vin[0].prevout.hash = mtx.GetHash();
+    mtxSpend.vin[0].prevout.n = 0;
+    mtxSpend.vout[0].scriptPubKey = CScript() << OP_0;
+    mtxSpend.vout[0].nValue = 21 * CENT;
+
+    CreateAndProcessBlock({mtxSpend}, GetScriptForRawPubKey(coinbaseKey.GetPubKey()), false, false);
+
+    BOOST_CHECK(chainActive.Height() == 103);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

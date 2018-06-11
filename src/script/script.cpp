@@ -234,6 +234,28 @@ bool CScript::IsWitnessProgram(int& version, std::vector<unsigned char>& program
     return false;
 }
 
+bool CScript::IsSidechainDeposit() const
+{
+    if (this->size() != 32)
+        return false;
+    if ((*this)[0] != OP_TRUE ||
+            (*this)[1] != 0x04 ||
+            (*this)[2] != 0x0e ||
+            (*this)[3] != 0x0d ||
+            (*this)[4] != 0x0d ||
+            (*this)[5] != 0x0e) {
+        return false;
+    }
+
+    // TODO check if nSidechain is valid
+    // TODO check keyID is valid?
+
+    if ((*this)[30] != OP_DROP || (*this)[31] != OP_2DROP)
+        return false;
+
+    return true;
+}
+
 bool CScript::IsCriticalHashCommit() const
 {
     // Check script size

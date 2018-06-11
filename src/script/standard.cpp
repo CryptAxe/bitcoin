@@ -31,6 +31,7 @@ const char* GetTxnOutputType(txnouttype t)
     case TX_WITNESS_V0_KEYHASH: return "witness_v0_keyhash";
     case TX_WITNESS_V0_SCRIPTHASH: return "witness_v0_scripthash";
     case TX_WITNESS_UNKNOWN: return "witness_unknown";
+    case TX_SIDECHAIN_DEPOSIT: return "sidechaindeposit";
     }
     return nullptr;
 }
@@ -60,6 +61,13 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<std::v
         typeRet = TX_SCRIPTHASH;
         std::vector<unsigned char> hashBytes(scriptPubKey.begin()+2, scriptPubKey.begin()+22);
         vSolutionsRet.push_back(hashBytes);
+        return true;
+    }
+
+    // Shortcut for Sidechain Deposit(s) (P2DC) which are always the same format
+    if (scriptPubKey.IsSidechainDeposit())
+    {
+        typeRet = TX_SIDECHAIN_DEPOSIT;
         return true;
     }
 

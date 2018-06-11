@@ -644,6 +644,7 @@ public:
     bool IsWitnessProgram(int& version, std::vector<unsigned char>& program) const;
 
     /** Script formats for Drivechains */
+    bool IsSidechainDeposit() const;
     bool IsCriticalHashCommit() const;
     bool IsSCDBHashMerkleRootCommit() const;
     bool IsBMMHashMerkleRootCommit() const;

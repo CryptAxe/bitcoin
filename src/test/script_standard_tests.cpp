@@ -117,6 +117,22 @@ BOOST_AUTO_TEST_CASE(script_standard_Solver_success)
     s << OP_9 << OP_ADD << OP_11 << OP_EQUAL;
     BOOST_CHECK(!Solver(s, whichType, solutions));
     BOOST_CHECK_EQUAL(whichType, TX_NONSTANDARD);
+
+    // TX_SIDECHAIN_DEPOSIT
+    s.clear();
+    s.resize(6);
+    s[0] = OP_TRUE; // Push 1 to the stack (0x51)
+    s[1] = 0x04; // Push next 4 bytes & continue
+    s[2] = 0x0e; // Begin flag bytes
+    s[3] = 0x0d;
+    s[4] = 0x0d;
+    s[5] = 0x0e; // End flag bytes
+    s << ToByteVector(pubkeys[0].GetID()); // Destination keyID
+    s << CScriptNum::serialize(255); // nSidechain
+    s << OP_DROP << OP_2DROP; // Drop flag bytes, keyID, nSidechain from stack
+
+    BOOST_CHECK(Solver(s, whichType, solutions));
+    BOOST_CHECK_EQUAL(whichType, TX_SIDECHAIN_DEPOSIT);
 }
 
 BOOST_AUTO_TEST_CASE(script_standard_Solver_failure)
