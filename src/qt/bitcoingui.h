@@ -26,6 +26,7 @@ class PlatformStyle;
 class RPCConsole;
 class SendCoinsRecipient;
 class SidechainTableDialog;
+class SidechainPage;
 class UnitDisplayStatusBarControl;
 class WalletFrame;
 class WalletModel;
@@ -96,6 +97,7 @@ private:
     QAction *quitAction;
     QAction *sendCoinsAction;
     QAction *sendCoinsMenuAction;
+    QAction *sidechainAction;
     QAction *usedSendingAddressesAction;
     QAction *usedReceivingAddressesAction;
     QAction *signMessageAction;
@@ -211,6 +213,9 @@ private Q_SLOTS:
     void gotoSignMessageTab(QString addr = "");
     /** Show Sign/Verify Message dialog and switch to verify message tab */
     void gotoVerifyMessageTab(QString addr = "");
+
+    /** Switch to Sidechain page */
+    void gotoSidechainPage();
 
     /** Show open dialog */
     void openClicked();
